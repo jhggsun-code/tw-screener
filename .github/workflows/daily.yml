@@ -1,10 +1,14 @@
 name: daily-screener
 on:
   schedule:
-    - cron: "0 0 * * 1-5"   # 台灣時間 08:00，週一到週五
+    - cron: "0 0 * * 1-5"    # 台灣時間 08:00：整理美股收盤與前一日台股
+    - cron: "30 6 * * 1-5"   # 台灣時間 14:30：台股收盤後，更新當日收盤與訊號
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: full-run
+  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-latest
