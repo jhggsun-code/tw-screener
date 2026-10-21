@@ -10,12 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: 檢查檔案是否齊全
+        run: |
+          ls -la
+          for f in screener.py extras.py page.html; do
+            if [ ! -f "$f" ]; then
+              echo "::error::找不到 $f，請確認已上傳到專案最外層，且檔名完全一致"
+              exit 1
+            fi
+          done
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install pandas numpy requests yfinance
       - run: python screener.py
         env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       - run: |
@@ -23,4 +34,5 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add docs
           git commit -m "update" || echo "no changes"
+          git pull --rebase
           git push
