@@ -1,0 +1,129 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#d32f2f"><link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png"><title>台股每日選股</title>
+<style>
+:root{--bg:#f3f4f8;--card:#fff;--tx:#1b1d23;--sub:#7a7f8c;--line:#e8eaf0}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#1a1d24;--tx:#eceef3;--sub:#9096a3;--line:#2a2e38}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{background:linear-gradient(135deg,#d32f2f,#ff7043);color:#fff;padding:calc(18px + env(safe-area-inset-top)) 18px 26px;border-radius:0 0 26px 26px}
+h1{margin:0;font-size:22px}header p{margin:4px 0 14px;font-size:13px;opacity:.92}
+.stats{display:flex;gap:10px}.stat{flex:1;background:rgba(255,255,255,.2);border-radius:14px;padding:10px 12px}
+.stat b{font-size:24px;display:block}.stat span{font-size:12px;opacity:.95}
+.intro{margin:16px 18px 4px;font-size:13px;color:var(--sub);line-height:1.5}
+.card{background:var(--card);margin:12px 14px;padding:14px;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,.06);border-left:6px solid var(--c)}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.nm{font-size:18px;font-weight:700}.cd{font-size:12px;color:var(--sub);margin-left:6px;font-weight:400}
+.pill{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;color:var(--c);background:rgba(128,128,128,.14)}
+.pr{text-align:right}.px{font-size:22px;font-weight:700}.pc{font-size:13px;font-weight:600}.u{color:#d32f2f}.d{color:#2e9e4f}
+.buy{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(128,128,128,.1);font-size:13px;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.chips span{font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--sub)}
+.chips b{color:var(--tx)}
+details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}summary{font-size:14px;font-weight:600;cursor:pointer;list-style:none}
+summary::before{content:"▸ "}details[open] summary::before{content:"▾ "}
+ul{margin:8px 0 0;padding-left:0;list-style:none}li{font-size:13px;line-height:1.55;padding:4px 0 4px 22px;position:relative}li::before{content:"✔";position:absolute;left:0;color:var(--c)}
+.warn{margin-top:8px;font-size:12px;color:#ef6c00}
+.star{margin-top:10px;width:100%;padding:9px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--tx);font-size:14px}
+#q{display:none;margin:14px;width:calc(100% - 28px);padding:13px 16px;font-size:16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--tx)}
+.empty{text-align:center;color:var(--sub);padding:40px 20px;font-size:14px}
+.foot{margin:18px 18px 8px;font-size:12px;color:var(--sub);line-height:1.6}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--sub);padding:10px 0 8px;font-size:12px}nav button span{display:block;font-size:22px}
+nav button.on{color:#d32f2f;font-weight:700}
+.mk{margin-top:12px;padding:8px 12px;border-radius:99px;background:rgba(255,255,255,.2);font-size:13px}
+.hint{margin:14px;padding:12px 14px;border-radius:16px;background:var(--card);box-shadow:0 2px 10px rgba(0,0,0,.06);font-size:13px;line-height:1.7;border-left:6px solid #d32f2f}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 14px}
+.mc{background:var(--card);border-radius:16px;padding:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.mt{display:flex;justify-content:space-between;font-size:13px;font-weight:600}.s2{font-size:11px;color:var(--sub);font-weight:400}
+.mv{margin-top:6px;font-size:19px;font-weight:700}.mv small{display:block;font-size:12px;font-weight:600;margin-top:2px}
+.sp{width:100%;height:34px;margin-top:6px}
+.nt{display:block;margin-top:6px;font-size:15px;font-weight:600;line-height:1.5;color:var(--tx);text-decoration:none}
+.legal{margin:-8px 0 0;padding:6px 18px 0;font-size:11px;color:var(--sub);text-align:center}
+.dis{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:99;padding:20px}
+.box{background:var(--card);border-radius:20px;padding:20px;max-width:420px;max-height:90vh;overflow:auto}
+.box h2{margin:0 0 10px;font-size:18px}.box li{padding-left:0}.box li::before{content:none}
+.box ul{padding-left:18px;list-style:disc}.box button{width:100%;margin-top:14px;padding:12px;border:0;border-radius:12px;background:#d32f2f;color:#fff;font-size:16px}
+.foot a{color:#d32f2f;text-decoration:underline}
+</style></head><body>
+<header><h1>📈 台股每日選股</h1><p id="meta">載入中…</p>
+<div class="stats"><div class="stat" onclick="sw('up')"><b id="n_up">-</b><span>🚀 突破偏多</span></div>
+<div class="stat" onclick="sw('dip')"><b id="n_dip">-</b><span>🛟 超跌止跌</span></div></div><div class="mk" id="mk" onclick="sw('mk')"></div></header>
+<div class="legal">個人研究用資料整理・非投資建議・不收取任何費用</div>
+<div class="intro" id="intro"></div>
+<input id="q" type="search" placeholder="🔍 輸入代號或名稱，例如 2330 或 台積電" oninput="render()">
+<div id="list"></div><div class="foot" id="foot"></div>
+<nav><button id="t_up" onclick="sw('up')"><span>🚀</span>突破</button><button id="t_dip" onclick="sw('dip')"><span>🛟</span>超跌</button><button id="t_my" onclick="sw('my')"><span>🔍</span>查詢</button><button id="t_mk" onclick="sw('mk')"><span>🌎</span>美股</button><button id="t_nw" onclick="sw('nw')"><span>📰</span>新聞</button></nav>
+<div class="dis" id="dis"><div class="box"><h2>⚠️ 使用前請先閱讀</h2><ul>
+<li>本工具是<b>個人研究用</b>的技術指標與新聞整理，內容由程式自動計算，不是任何形式的投資建議或買賣推薦。</li>
+<li>不保證獲利。股票投資有風險，請自行判斷並承擔全部風險。</li>
+<li>本工具<b>完全免費</b>，不收取任何費用。請勿將內容用於收費、帶單或對外推薦個股。</li>
+<li>資料為前一交易日收盤，可能有誤或延遲；新聞僅為標題與推測，請至原網站閱讀完整內容。</li></ul>
+<button onclick="ok()">我了解並同意</button></div></div>
+<script>
+function showDis(){document.getElementById('dis').style.display='flex';}
+function ok(){try{localStorage.setItem('ack1','1')}catch(e){}document.getElementById('dis').style.display='none';}
+try{if(localStorage.getItem('ack1'))document.getElementById('dis').style.display='none';}catch(e){}
+var D=null,S=null,M=null,N=null,tab='up';
+var TAGS={breakout:{t:'技術面偏多（突破）',e:'🚀',c:'#2e9e4f'},prep:{t:'接近突破',e:'⚡',c:'#f9a825'},dip:{t:'跌深出現止跌跡象',e:'🛟',c:'#ef6c00'},near:{t:'接近低檔支撐',e:'📉',c:'#1976d2'},weak:{t:'弱勢走勢',e:'⛔',c:'#c62828'},none:{t:'無明確訊號',e:'➖',c:'#9e9e9e'}};
+var INTRO={nw:'總經與國際新聞標題，並推測可能影響的族群。這只是依標題做的推測，可能判斷錯誤，點標題到原網站看完整內容。',mk:'美股前一交易日收盤與重要指標。台灣早上開盤前，可作為當天電子股情緒的參考。',up:'已放量突破前高、均線多頭排列的股票，依量比排序。點「為什麼會入選」看原因。',
+dip:'自高點大跌、RSI 曾超賣且開始回升的股票，依跌幅排序。跌深不代表會漲，請自行確認原因。',
+my:'查任一檔股票目前的訊號狀態；點「加自選」存在這支手機，下次直接看。'};
+function wl(){try{return JSON.parse(localStorage.getItem('wl')||'[]')}catch(e){return[]}}
+function tog(c){var a=wl(),i=a.indexOf(c);if(i<0)a.push(c);else a.splice(i,1);try{localStorage.setItem('wl',JSON.stringify(a))}catch(e){}render();}
+function sw(t){tab=t;window.scrollTo(0,0);if(t=='my'&&!S){fetch('stocks.json?'+Date.now()).then(function(r){return r.json()}).then(function(d){S=d;render();}).catch(function(){document.getElementById('list').innerHTML='<div class="empty">資料載入失敗</div>';});}render();}
+function card(x){
+ var g=TAGS[x.t]||TAGS.none,up=x.p>=0,on=wl().indexOf(x.code)>=0,w=x.w||[];
+ return '<div class="card" style="--c:'+g.c+'"><div class="top"><div><div class="nm">'+x.n+'<span class="cd">'+x.code+'</span></div>'+
+ '<span class="pill">'+g.e+' '+g.t+'</span></div><div class="pr"><div class="px '+(up?'u':'d')+'">'+x.c.toFixed(2)+'</div>'+
+ '<div class="pc '+(up?'u':'d')+'">'+(up?'▲ ':'▼ ')+Math.abs(x.p).toFixed(2)+'%</div></div></div>'+
+ (x.b?'<div class="buy">💡 <b>觀察重點</b>　'+x.b+'</div>':'')+
+ '<div class="chips">'+(x.s?'<span>技術價位參考 <b>'+x.s+'</b></span>':'')+(x.v?'<span>量比 <b>'+x.v+'x</b></span>':'')+'<span>RSI <b>'+x.r+'</b></span><span>距半年高 <b>'+x.d+'%</b></span></div>'+
+ (w.length?'<details><summary>為什麼會是這個狀態？</summary><ul>'+w.map(function(i){return '<li>'+i+'</li>'}).join('')+'</ul></details>':'')+
+ (x.k?'<div class="warn">⚠️ 近期成交量偏低，流動性風險較高</div>':'')+
+ '<button class="star" data-c="'+x.code+'" onclick="tog(this.dataset.c)">'+(on?'★ 已加入自選（點此移除）':'☆ 加入自選')+'</button></div>';}
+function spark(a,up){var mn=Math.min.apply(null,a),mx=Math.max.apply(null,a),pts=a.map(function(v,i){return (i*100/(a.length-1)).toFixed(1)+','+(30-(v-mn)/((mx-mn)||1)*30).toFixed(1)}).join(' ');
+ return '<svg class="sp" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="'+(up?'#d32f2f':'#2e9e4f')+'" stroke-width="2" points="'+pts+'"/></svg>';}
+function mkhtml(){
+ if(!M||!M.items.length)return '<div class="empty">尚無美股資料</div>';
+ var h=(M.hint||[]).length?'<div class="hint"><b>🌎 對今天台股的參考</b><br>'+M.hint.join('<br>')+'</div>':'';
+ return h+'<div class="mg">'+M.items.map(function(m){var up=m.p>=0,y=m.sym=='^TNX',v=y?m.ch:m.p;
+  return '<div class="mc"><div class="mt"><span>'+m.e+' '+m.name+'</span><span class="s2">'+m.d.slice(5)+'</span></div><div class="mv">'+m.c.toLocaleString()+
+  '<small class="'+(up?'u':'d')+'">'+(up?'▲ ':'▼ ')+Math.abs(v).toFixed(y?3:2)+(y?' 點':'%')+'</small></div>'+spark(m.sp,up)+'</div>'}).join('')+'</div>';}
+function mkline(){var g=function(s){return M.items.filter(function(x){return x.sym==s})[0]};
+ var o=[['^SOX','費半'],['^IXIC','那指'],['^DJI','道瓊']].map(function(a){var x=g(a[0]);return x?a[1]+' '+(x.p>=0?'+':'')+x.p.toFixed(2)+'%':''}).filter(Boolean);
+ return o.length?'🌎 '+o.join('　'):'';}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function nwhtml(){
+ if(!N||!N.items.length)return '<div class="empty">尚無新聞資料</div>';
+ var h='<div class="hint"><b>📰 今日重點'+(N.mode=='ai'?'（AI 分析）':'（規則式推測）')+'</b><br>'+(N.summary||[]).map(esc).join('<br>')+'</div>';
+ return h+N.items.map(function(x){var c=x.dir=='偏多'?'#d32f2f':x.dir=='偏空'?'#2e9e4f':'#9e9e9e',e=x.dir=='偏多'?'🔺':x.dir=='偏空'?'🔻':'➖',lk=/^https?:/.test(x.link)?x.link:'#';
+  return '<div class="card" style="--c:'+c+'"><div class="s2">'+esc(x.cat)+'　'+esc(x.t)+(x.src?'　'+esc(x.src):'')+'</div>'+
+  '<a class="nt" href="'+esc(lk)+'" target="_blank" rel="noopener">'+esc(x.title)+'</a>'+
+  '<div style="margin-top:8px"><span class="pill">'+e+' 對台股可能'+esc(x.dir)+'</span></div>'+
+  ((x.sectors||x.why)?'<details><summary>可能的影響</summary><ul>'+(x.sectors?'<li>可能影響：'+esc(x.sectors)+'</li>':'')+(x.why?'<li>'+esc(x.why)+'</li>':'')+'</ul></details>':'')+'</div>';}).join('');}
+function render(){
+ if(!D)return;var l=document.getElementById('list'),q=document.getElementById('q');
+ ['up','dip','my','mk','nw'].forEach(function(t){document.getElementById('t_'+t).className=tab==t?'on':''});
+ document.getElementById('intro').textContent=INTRO[tab];
+ document.getElementById('foot').innerHTML='使用前一交易日收盤資料計算，非即時報價。本頁為個人研究用的資料整理，不構成投資建議或買賣推薦，不保證上漲或獲利；「技術價位參考」只是技術面價位，請自行判斷並承擔風險。本工具不收取任何費用。<br><a onclick="showDis()">免責聲明與使用說明</a>';
+ q.style.display=tab=='my'?'block':'none';
+ if(tab=='mk'){l.innerHTML=mkhtml();return;}
+ if(tab=='nw'){l.innerHTML=nwhtml();return;}
+ if(tab=='my'){
+  if(!S){l.innerHTML='<div class="empty">載入中…</div>';return;}
+  var k=q.value.trim().toLowerCase(),codes;
+  if(k){codes=Object.keys(S.s).filter(function(c){return c.indexOf(k)==0||S.s[c].n.toLowerCase().indexOf(k)>=0}).slice(0,20);}
+  else{codes=wl().filter(function(c){return S.s[c]});}
+  if(!codes.length){l.innerHTML='<div class="empty">'+(k?'找不到符合的股票':'輸入代號或名稱查詢<br>點「加入自選」就會存在這裡')+'</div>';return;}
+  l.innerHTML=codes.map(function(c){return card(Object.assign({code:c},S.s[c]))}).join('');return;}
+ var o=D[tab];
+ l.innerHTML=o.stocks.length?o.stocks.map(card).join(''):'<div class="empty">🌤 今日沒有符合條件的個股</div>';
+}
+fetch('data.json?'+Date.now()).then(function(r){return r.json()}).then(function(d){D=d;
+ document.getElementById('meta').textContent='資料日 '+d.date+'　更新 '+d.updated;
+ document.getElementById('n_up').textContent=d.up.total;document.getElementById('n_dip').textContent=d.dip.total;render();})
+.catch(function(){document.getElementById('meta').textContent='尚無資料，請先手動執行一次 Actions';});
+fetch('market.json?'+Date.now()).then(function(r){return r.json()}).then(function(d){M=d;document.getElementById('mk').textContent=mkline();if(tab=='mk')render();}).catch(function(){});
+fetch('news.json?'+Date.now()).then(function(r){return r.json()}).then(function(d){N=d;if(tab=='nw')render();}).catch(function(){});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script></body></html>
