@@ -8,14 +8,18 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: 解壓縮更新檔
+        run: |
+          if [ -f update.zip ]; then unzip -o update.zip; fi
       - name: 檢查檔案是否齊全
         run: |
           ls -la
-          for f in screener.py extras.py page.html; do
+          for f in screener.py extras.py us.py page.html app.css app.js; do
             if [ ! -f "$f" ]; then
-              echo "::error::找不到 $f，請確認已上傳到專案最外層，且檔名完全一致"
+              echo "::error::找不到 $f，請確認 update.zip 已上傳到專案最外層，且檔名完全一致"
               exit 1
             fi
           done
