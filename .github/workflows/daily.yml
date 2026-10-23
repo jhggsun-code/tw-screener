@@ -2,7 +2,8 @@ name: daily-screener
 on:
   schedule:
     - cron: "0 0 * * 1-5"    # 台灣時間 08:00：整理美股收盤與前一日台股
-    - cron: "30 6 * * 1-5"   # 台灣時間 14:30：台股收盤後，更新當日收盤與訊號
+    - cron: "30 6 * * 1-5"   # 台灣時間 14:30：台股收盤後，更新當日收盤與訊號（官方資料未公布會自動等待）
+    - cron: "0 10 * * 1-5"   # 台灣時間 18:00：補跑一次，確保當日收盤資料完整
   workflow_dispatch:
 permissions:
   contents: write
@@ -12,7 +13,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: 解壓縮更新檔
@@ -21,7 +22,7 @@ jobs:
       - name: 檢查檔案是否齊全
         run: |
           ls -la
-          for f in screener.py extras.py us.py cal.py events.py page.html app.css app.js; do
+          for f in screener.py extras.py us.py cal.py events.py twse.py page.html app.css app.js; do
             if [ ! -f "$f" ]; then
               echo "::error::找不到 $f，請確認 update.zip 已上傳到專案最外層，且檔名完全一致"
               exit 1
