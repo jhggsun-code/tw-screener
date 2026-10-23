@@ -1,0 +1,26 @@
+name: live-quotes
+on:
+  schedule:
+    - cron: "50 0 * * 1-5"   # 台灣時間 08:50 啟動，持續到 13:35 收盤自動結束
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: live
+  cancel-in-progress: false
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          if [ -f update.zip ]; then unzip -o update.zip; fi
+          test -f live.py || { echo "::error::找不到 live.py，請重新上傳最新的 update.zip"; exit 1; }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests yfinance pandas
+      - run: python live.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
