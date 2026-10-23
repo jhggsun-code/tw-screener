@@ -1,12 +1,12 @@
 (function(){
 'use strict';
 var DATA={},ST={tab:'home',sub:'up',cat:'全部',flt:'全部',q:'',nsub:'tw',ncat:'全部',nimp:'全部',rng:66,mask:false,open:false,cur:null};
-var PK=['tab','sub','cat','flt','nsub','ncat','nimp','mask','rng'];
-var URLS={D:'data.json',S:'stocks.json',H:'hist.json',U:'us.json',N:'news.json',E:'enews.json',M:'market.json'};
-var TAGS={breakout:{t:'技術面偏多（突破）',e:'🚀',c:'#5c6bc0'},prep:{t:'接近突破',e:'⚡',c:'#f9a825'},dip:{t:'跌深出現止跌跡象',e:'🛟',c:'#ef6c00'},near:{t:'接近低檔支撐',e:'📉',c:'#0097a7'},weak:{t:'弱勢走勢',e:'⛔',c:'#78909c'},none:{t:'無明確訊號',e:'➖',c:'#9e9e9e'}};
+var PK=['tab','sub','cat','flt','nsub','ncat','nimp','mask','rng'],ccat='全部';
+var URLS={V:'events.json',D:'data.json',S:'stocks.json',H:'hist.json',U:'us.json',N:'news.json',E:'enews.json',M:'market.json'};
+var TAGS={breakout:{t:'技術面偏多（突破）',e:'🚀',c:'#5c6bc0'},prep:{t:'接近突破',e:'⚡',c:'#f9a825'},dip:{t:'跌深出現止跌跡象',e:'🛟',c:'#ef6c00'},near:{t:'接近低檔支撐',e:'📉',c:'#0097a7'},weak:{t:'弱勢走勢',e:'⛔',c:'#78909c'},none:{t:'無明確訊號',e:'➖',c:'#9e9e9e'},bull:{t:'多頭排列',e:'📈',c:'#5c6bc0'},bear:{t:'空頭排列',e:'📉',c:'#78909c'},range:{t:'盤整震盪',e:'➖',c:'#9e9e9e'}};
 var CKL=['收盤站上月線（MA20）','收盤站上季線（MA60）','月線上彎','MACD 柱狀體為正','RSI 在 50～75 健康區','今日量能不低於 20 日均量'];
-var INTRO={up:'已放量突破前高、均線多頭排列的標的（含 ETF），依量比排序。點進去看走勢圖與入選原因。',dip:'自半年高點大跌逾 30%、RSI 曾超賣且開始回升。跌深不代表會漲，請自行確認跌的原因。',gain:'今日漲幅前 10 名（已排除成交量過低者）。',act:'今日成交值前 10 名，代表資金最集中的標的。'};
-var SUBS=[['up','🚀 突破'],['dip','🛟 超跌'],['flow','💧 資金流向'],['gain','🔥 漲幅'],['act','💰 成交值']];
+var INTRO={pick:'',dip:'自半年高點大跌逾 30%、RSI 曾超賣且開始回升。跌深不代表會漲，請自行確認跌的原因。',gain:'今日漲幅前 10 名（已排除成交量過低者）。',act:'今日成交值前 10 名，代表資金最集中的標的。'};
+var SUBS=[['pick','🎯 精選5檔'],['flow','💧 資金流向'],['dip','🛟 超跌'],['gain','🔥 漲幅'],['act','💰 成交值'],['cal','🗓 行事曆'],['cyc','🌡 景氣循環']];
 function $(i){return document.getElementById(i);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function J(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();});}
@@ -22,37 +22,88 @@ function f2(n,d){return(n==null||isNaN(n))?'—':Number(n).toFixed(d==null?2:d);
 function sg(p){return(p==null||isNaN(p))?'—':(p>=0?'+':'')+Number(p).toFixed(2)+'%';}
 function cl(p){return p>=0?'u':'d';}
 function cpc(p){return'<span class="'+cl(p)+'">'+sg(p)+'</span>';}
+function ag(n,d){return(n==null||isNaN(n))?'':Math.abs(n).toFixed(d==null?2:d);}
+function chgTxt(p,cg,d){p=p||0;return(p>=0?'▲ ':'▼ ')+(cg!=null?ag(cg,d)+'（'+Math.abs(p).toFixed(2)+'%）':Math.abs(p).toFixed(2)+'%');}
+function stars(n){n=n||1;return'★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n);}
+function dleft(s){var t=new Date(new Date().toDateString()),d=new Date(s+'T00:00:00');return Math.round((d-t)/864e5);}
 function lots(n){return n==null?'—':Math.round(n).toLocaleString();}
 function big(n){if(!n)return'—';return n>=1e12?(n/1e12).toFixed(2)+' 兆美元':Math.round(n/1e8).toLocaleString()+' 億美元';}
 function empty(t){return'<div class="empty">'+t+'</div>';}
 function ani(){[].forEach.call(document.querySelectorAll('.row,.card,.tile,.hint,.fcard'),function(e,i){e.style.setProperty('--i',Math.min(i,10));});}
 /* 報價覆蓋（盤中／收盤後更新） */
-function qtw(c){var Q=DATA.Q,D=DATA.D;return(Q&&Q.tw&&D&&Q.tw_d>=D.date&&Q.tw[c])||null;}
+function liveOk(){var L=DATA.L;return!!(L&&L.t&&(Date.now()/1000-L.t)<180);}
+function loadL(){var h=location.hostname,p=(location.pathname.split('/')[1]||'');if(!/github\.io$/.test(h)||!p){DATA.L=null;return Promise.resolve();}
+ return fetch('https://raw.githubusercontent.com/'+h.split('.')[0]+'/'+p+'/live/live.json?t='+Math.floor(Date.now()/15000)).then(function(r){return r.json();}).then(function(l){DATA.L=l;}).catch(function(){});}
+function qtw(c){var L=DATA.L;if(liveOk()&&L.tw&&L.tw[c])return L.tw[c];var Q=DATA.Q,D=DATA.D;return(Q&&Q.tw&&D&&Q.tw_d>=D.date&&Q.tw[c])||null;}
 function qus(s){var Q=DATA.Q;return(Q&&Q.us&&Q.us[s])||null;}
-function qix(s){var Q=DATA.Q;return(Q&&Q.ix&&Q.ix[s])||null;}
-function mkItem(s){var m=DATA.M,x=m&&m.items.filter(function(y){return y.sym==s;})[0];if(!x)return null;var q=qix(s);return q?{sym:s,name:x.name,e:x.e,c:q[0],p:q[1],ch:q[2],sp:x.sp}:x;}
-function qbanner(){var Q=DATA.Q;return Q&&Q.upd?'<div class="qb"><span class="live"></span>報價更新 '+esc(Q.upd)+'（Yahoo 延遲約 15～20 分鐘）。技術訊號與榜單以最近一次收盤分析為準。</div>':'';}
+function qix(s){var L=DATA.L;if(liveOk()&&L.ix&&L.ix[s])return L.ix[s];var Q=DATA.Q;return(Q&&Q.ix&&Q.ix[s])||null;}
+function mkItem(s){var m=DATA.M,x=m&&m.items.filter(function(y){return y.sym==s;})[0];if(!x)return null;var q=qix(s);if(!q)return x;var o={};for(var k in x)o[k]=x[k];o.c=q[0];o.p=q[1];o.ch=q[2];return o;}
+function qbInner(){var Q=DATA.Q;if(liveOk())return'<div class="qb"><span class="live"></span>⚡ 即時報價 '+esc(DATA.L.upd)+'（'+(DATA.L.src=='yahoo'?'Yahoo，可能延遲':'證交所基本市況報導')+'，約每 30 秒更新）。技術訊號與榜單以最近一次收盤分析為準。</div>';
+ return Q&&Q.upd?'<div class="qb"><span class="live"></span>報價更新 '+esc(Q.upd)+'（Yahoo 延遲約 15～20 分鐘）。技術訊號與榜單以最近一次收盤分析為準。</div>':'';}
+function qbanner(){return'<div id="qbn">'+qbInner()+'</div>';}
 function spark(a,up){if(!a||a.length<2)return'';var mn=Math.min.apply(null,a),mx=Math.max.apply(null,a),pts=a.map(function(v,i){return(i*100/(a.length-1)).toFixed(1)+','+(28-(v-mn)/((mx-mn)||1)*28).toFixed(1);}).join(' ');return'<svg class="sp" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline fill="none" stroke="'+(up?'#d9434b':'#2a9d62')+'" stroke-width="2" points="'+pts+'"/></svg>';}
-function row(o){var g=TAGS[o.t]||TAGS.none,up=o.p>=0;return'<div class="row" data-a="open" data-k="'+esc(o.k)+'" style="--c:'+g.c+'"><div class="rl"><div class="rn">'+esc(o.n)+'<span class="cd">'+esc(o.code)+(o.e?' · ETF':'')+'</span></div><span class="pill">'+g.e+' '+g.t+'</span>'+(o.sub?'<div class="rsub">'+esc(o.sub)+'</div>':'')+'</div><div class="rr">'+(o.sp||'')+'<div class="px '+cl(o.p)+'">'+f2(o.c)+'</div><div class="pc '+cl(o.p)+'">'+(up?'▲ ':'▼ ')+Math.abs(o.p).toFixed(2)+'%</div></div></div>';}
-function twRow(code,x,sub){var q=qtw(code);return row({k:'tw:'+code,n:x.n,code:code,e:x.e,t:x.t,c:q?q[0]:x.c,p:q?q[1]:x.p,sub:sub});}
-function usRow(u){var q=qus(u.sym),p=q?q[1]:(u.p||0);return row({k:'us:'+u.sym,n:u.n,code:u.sym,t:u.t,c:q?q[0]:u.c,p:p,sp:spark(u.hist.slice(-30),p>=0),sub:u.cat+(u.cap?' · 市值 '+big(u.cap):'')});}
+function row(o){var g=TAGS[o.t]||TAGS.none;return'<div class="row" data-a="open" data-k="'+esc(o.k)+'" data-code="'+esc(o.code)+'" style="--c:'+g.c+'"><div class="rl"><div class="rn">'+esc(o.n)+'<span class="cd">'+esc(o.code)+(o.e?' · ETF':'')+'</span></div><span class="pill">'+g.e+' '+g.t+'</span>'+(o.sub?'<div class="rsub">'+esc(o.sub)+'</div>':'')+'</div><div class="rr">'+(o.sp||'')+'<div class="px '+cl(o.p)+'">'+f2(o.c)+'</div><div class="pc '+cl(o.p)+'">'+chgTxt(o.p,o.cg)+'</div></div></div>';}
+function twRow(code,x,sub){var q=qtw(code);return row({k:'tw:'+code,n:x.n,code:code,e:x.e,t:x.t,c:q?q[0]:x.c,p:q?q[1]:x.p,cg:q&&q[2]!=null?q[2]:x.cg,sub:sub});}
+function usRow(u){var q=qus(u.sym),p=q?q[1]:(u.p||0);return row({k:'us:'+u.sym,n:u.n,code:u.sym,t:u.t,c:q?q[0]:u.c,p:p,cg:q&&q[2]!=null?q[2]:u.cg,sp:spark(u.hist.slice(-30),p>=0),sub:u.cat+(u.cap?' · 市值 '+big(u.cap):'')});}
 function chips(list,cur,act,cnt){return'<div class="cps">'+list.map(function(x){return'<button class="cp'+(x==cur?' on':'')+'" data-a="'+act+'" data-v="'+esc(x)+'">'+esc(x)+(cnt&&cnt[x]!=null?' '+cnt[x]:'')+'</button>';}).join('')+'</div>';}
 function seg(list,cur,act){return'<div class="seg">'+list.map(function(x){return'<button class="'+(x[0]==cur?'on':'')+'" data-a="'+act+'" data-v="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';}
 
 /* ---------- 首頁 ---------- */
+function evList(){var V=DATA.V,L=[];if(!V)return L;(V.events||[]).forEach(function(e){L.push({d:e.d,md:e.md,wd:e.wd,mk:e.mk,title:e.title,tip:e.tip,est:e.est});});
+ ((V.er||{}).up||[]).forEach(function(e){L.push({d:e.d,md:e.d.slice(5).replace('-','/'),wd:'',mk:'er',title:e.n+' 財報／法說',tip:'公布日期為估計，以公司公告為準。'+(e.tw?'台灣相關：'+e.tw+'。':'')});});
+ L.forEach(function(e){e.days=dleft(e.d);});return L.filter(function(e){return e.days>=0;}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0;});}
+function whenTxt(n){return n==0?'今天':n==1?'明天':'還有 '+n+' 天';}
+function twiiHtml(){var tw=mkItem('^TWII');return'📈 台股加權 <b>'+(tw?tw.c.toLocaleString():'—')+'</b> '+(tw?'<span class="'+cl(tw.p)+'">'+chgTxt(tw.p,tw.ch,2)+'</span>':'');}
 function vHome(){
  var d=DATA.D;if(!d)return empty('尚無資料<br>請先到 GitHub 的 Actions 手動執行一次');
- var tw=mkItem('^TWII'),m=DATA.M,f=d.flow,h=qbanner()+'<div class="tiles"><div class="tile"><small>📈 台股加權</small><b>'+(tw?tw.c.toLocaleString():'—')+'</b>'+(tw?cpc(tw.p):'')+'</div>'+
- '<div class="tile" data-a="sub" data-v="up"><small>🚀 突破偏多</small><b data-n="'+d.up.total+'">'+d.up.total+'</b><span>檔</span></div><div class="tile" data-a="sub" data-v="dip"><small>🛟 超跌止跌</small><b data-n="'+d.dip.total+'">'+d.dip.total+'</b><span>檔</span></div></div>';
- if(f)h+='<div class="hint" data-a="sub" data-v="flow">💧 <b>今日資金流向</b><br>'+esc(f.headline)+'<br><span class="s2">點開看族群細節 ›</span></div>';
- if(m&&m.hint&&m.hint.length)h+='<div class="hint"><b>🌎 對今天台股的參考</b><br>'+m.hint.map(esc).join('<br>')+'</div>';
+ if(!SUBS.some(function(s){return s[0]==ST.sub;}))ST.sub='pick';
+ var m=DATA.M,f=d.flow,b=d.breadth,h=qbanner();
+ var snap='<span id="twii">'+twiiHtml()+'</span>';
+ if(b)snap+='<br>🌡 市場溫度 <b>'+b.label+'</b>（'+b.temp+'）・上漲 '+b.adv+'／下跌 '+b.dec+' 家・'+b.mood;
+ if(f)snap+='<br>💧 '+esc(f.headline.split('（')[0]);
+ if(m&&m.hint&&m.hint.length)snap+='<br>🌎 '+esc(m.hint[0]);
+ h+='<div class="hint"><b>📌 今日一眼看懂</b><br>'+snap+'</div>';
+ var ev=evList().filter(function(e){return e.days<=7;}).slice(0,3);
+ if(ev.length)h+='<div class="hint" data-a="sub" data-v="cal" style="border-left-color:#f9a825">🗓 <b>近期提醒</b><br>'+ev.map(function(e){return(e.days<=1?'⚠️ ':'• ')+e.md+(e.wd?'（'+e.wd+'）':'')+' '+esc(e.title)+'　<span class="s2">'+whenTxt(e.days)+(e.est?'・預估':'')+'</span>';}).join('<br>')+'<br><span class="s2">點開看影響說明 ›</span></div>';
  h+=seg(SUBS,ST.sub,'sub');
  if(ST.sub=='flow')return h+vFlow();
+ if(ST.sub=='pick')return h+vPick();
+ if(ST.sub=='cal')return h+vCal();
+ if(ST.sub=='cyc')return h+vCyc();
  h+='<div class="intro">'+INTRO[ST.sub]+'</div>';
  var L=(d[ST.sub]||{}).stocks||[];
  if(!L.length)return h+empty('🌤 目前沒有符合條件的標的');
  return h+L.map(function(x){var sub=ST.sub=='gain'?'成交量 '+lots(x.q)+' 張':ST.sub=='act'?'成交值約 '+f2(x.tn,1)+' 億':(x.b||(x.w&&x.w[0])||'');return twRow(x.code,x,sub);}).join('');
 }
+function pickCard(x,i){var q=qtw(x.code),p=q?q[1]:x.p,c=q?q[0]:x.c,cg=q&&q[2]!=null?q[2]:x.cg,g=TAGS[x.t]||TAGS.none;
+ return'<div class="card" data-a="open" data-k="tw:'+esc(x.code)+'" style="--c:'+g.c+'"><div class="top2"><div><span class="rank">'+(i+1)+'</span><b style="font-size:17px">'+esc(x.n)+'</b><span class="cd">'+esc(x.code)+(x.i?' · '+esc(x.i):'')+'</span></div><div class="rr"><div class="px '+cl(p)+'">'+f2(c)+'</div><div class="pc '+cl(p)+'">'+chgTxt(p,cg)+'</div></div></div>'+
+ '<div style="margin-top:8px"><span class="pill">'+g.e+' '+g.t+'</span>　<span class="s2">技術面評分 <b>'+(x.sc||'—')+'</b> / 100</span></div><div class="meter" style="margin:8px 0 4px"><i class="'+(x.sc>=20?'on':'')+'"></i><i class="'+(x.sc>=40?'on':'')+'"></i><i class="'+(x.sc>=60?'on':'')+'"></i><i class="'+(x.sc>=80?'on':'')+'"></i><i class="'+(x.sc>=95?'on':'')+'"></i></div>'+
+ '<ul>'+(x.w||[]).slice(0,3).map(function(t){return'<li>'+esc(t)+'</li>';}).join('')+'</ul>'+(x.b?'<div class="buy">💡 '+esc(x.b)+(x.s?'<br>技術價位參考：'+f2(x.s,1):'')+'</div>':'')+'<div class="s2" style="margin-top:8px">⚠️ 風險：技術訊號可能失效，需自設停損並確認基本面與消息面。點進去看走勢圖。</div></div>';}
+function vPick(){var d=DATA.D,p=d.pick||{},L=p.stocks||[];
+ return'<div class="intro">依<b>技術面綜合評分</b>（訊號強度、6 項檢查、量能、RSI 位置、近期漲幅是否過熱、流動性）排出分數最高的 5 檔個股（不含 ETF，同產業最多 2 檔），候選共 '+(p.total||0)+' 檔。<b>這是技術面的排序，不是買賣推薦</b>，也不保證上漲。</div>'+(L.length?L.map(pickCard).join(''):empty('🌤 今日沒有符合條件的標的'));}
+function vCal(){var V=DATA.V;if(!V)return empty('尚無行事曆資料<br>請重新執行一次 Actions');
+ var L=evList().filter(function(e){return ccat=='全部'||(ccat=='台股'&&e.mk=='tw')||(ccat=='美股'&&e.mk=='us')||(ccat=='財報'&&e.mk=='er');}),h='<div class="intro">台股結算日、美股三巫日／FOMC／非農與追蹤個股的財報日，並說明對股市的可能影響。標示「預估」的日期以官方公告為準。</div>'+chips(['全部','台股','美股','財報'],ccat,'ccat');
+ h+=L.length?L.map(function(e){var col=e.mk=='tw'?'#3b6fe0':e.mk=='us'?'#7e57c2':'#ef6c00';return'<div class="card evt" style="--c:'+col+'"><div class="ed"><b>'+e.md+'</b><small>'+(e.wd?'週'+e.wd:'')+'</small></div><div style="flex:1"><div class="top2"><b>'+esc(e.title)+'</b><span class="s2">'+whenTxt(e.days)+'</span></div>'+(e.est?'<span class="pill">預估日期</span>':'')+'<div class="es">'+esc(e.tip)+'</div></div></div>';}).join(''):empty('近期沒有這個類別的事件');
+ var R=(V.latest||[]);h+='<div class="intro"><b>📢 官方最新公布（美國重要數據）</b>　來源：BLS／Fed／BEA 公開資料，內容為英文原文摘要。與市場預期的差距才是影響股市的關鍵，請搭配財經行事曆查看預期值。</div>';
+ h+=R.length?R.map(function(r){return'<div class="card" style="--c:#7e57c2"><div class="s2">'+esc(r.src)+' · '+esc(r.t)+'</div><a class="nt" href="'+esc(/^https?:/.test(r.link)?r.link:'#')+'" target="_blank" rel="noopener">'+esc(r.title)+'</a>'+(r.desc?'<div class="es">'+esc(r.desc)+'</div>':'')+(r.tip?'<div class="imp"><b>📊 怎麼影響股市</b>'+esc(r.tip)+'</div>':'')+'</div>';}).join(''):empty('近 3 週沒有抓到官方公布（或來源暫時無法連線）');
+ var E=(V.er||{}).res||[];h+='<div class="intro"><b>🏢 近期財報／法說結果（追蹤的美股龍頭）</b>　「兩日反應」＝公布前一天收盤到公布後一天收盤的漲跌。</div>';
+ h+=E.length?E.map(function(r){var rx=r.rx;return'<div class="card" style="--c:'+(rx==null?'#9e9e9e':rx>=0?'#d9434b':'#2a9d62')+'"><div class="top2"><b>'+esc(r.n)+' <span class="cd">'+esc(r.sym)+'</span></b><span class="s2">'+r.d.slice(5).replace('-','/')+'</span></div><div class="fm" style="font-size:13px">EPS 實際 <b>'+f2(r.act)+'</b> vs 預期 '+f2(r.est)+'（驚喜 '+(r.sur==null?'—':(r.sur>=0?'+':'')+r.sur+'%')+'）・兩日反應 '+(rx==null?'—':cpc(rx))+'</div>'+(r.note?'<div class="imp"><b>📊 解讀</b>'+esc(r.note)+(r.tw?'<br>台灣相關：'+esc(r.tw):'')+'</div>':'')+'</div>';}).join(''):empty('近 30 天沒有已公布的財報資料（或資料來源暫時無法取得）');
+ h+='<div class="fcard"><details><summary>經濟數據速查：看什麼、怎麼影響股市</summary><ul style="margin-top:8px">'+(V.ind||[]).map(function(t){return'<li style="padding-left:0"><b>'+esc(t[0])+'</b>（'+esc(t[1])+'）<br>'+esc(t[2])+'</li>';}).join('')+'</ul></details></div>';
+ return h;}
+function vCyc(){var m=DATA.M||{},b=(DATA.D||{}).breadth,nd=m.ndc,cy=m.cycle,h='<div class="intro">景氣循環位置會影響哪些族群比較容易表現。以下結合官方景氣燈號、加權指數價格推估與市場寬度，只是背景參考。</div>';
+ var LIGHTS=[['藍燈','9～16','低迷','#3b6fe0'],['黃藍燈','17～22','轉向觀察','#4fc3f7'],['綠燈','23～31','穩定','#2a9d62'],['黃紅燈','32～37','轉向觀察','#ffb300'],['紅燈','38～45','熱絡／過熱','#d9434b']];
+ h+='<div class="fcard"><b>🚦 台灣景氣對策信號（國發會）</b>';
+ if(nd){var cur=nd.light;h+='<div style="margin-top:8px"><span class="big">'+esc(nd.light)+'</span>　綜合判斷分數 <b>'+nd.score+'</b>'+(nd.prev!=null?'（上期 '+nd.prev+'）':'')+'<div class="s2">資料期：'+esc(nd.date)+'</div></div>';}
+ else h+='<div class="es">暫時無法自動取得最新燈號（官方開放資料連線失敗）。請到 <a href="https://index.ndc.gov.tw/n/zh_tw/lightscore" target="_blank" rel="noopener" style="color:var(--acc)">國發會景氣指標查詢系統</a> 查看。</div>';
+ h+='<div class="light">'+LIGHTS.map(function(l){return'<div style="background:'+l[3]+';opacity:'+(nd&&nd.light==l[0]?1:.45)+'"><b>'+l[0]+'</b><small>'+l[1]+' 分</small></div>';}).join('')+'</div><div class="s2" style="line-height:1.6">燈號每月由國發會公布，屬同時／落後性質：紅燈代表景氣熱絡但要留意過熱與政策緊縮；藍燈代表低迷，歷史上常接近景氣落底，但不代表立刻反轉。</div></div>';
+ if(cy)h+='<div class="fcard"><b>🧭 加權指數價格推估：'+esc(cy.phase)+'</b><div class="es">指數 '+cy.last.toLocaleString()+'，季線約 '+cy.ma60.toLocaleString()+'、半年線約 '+cy.ma120.toLocaleString()+'。依指數與季線、半年線的相對位置與季線方向推估，屬價格面推測，不是官方景氣指標。</div></div>';
+ if(b){h+='<div class="fcard"><b>🌡 市場溫度計：'+b.label+'（'+b.temp+'）</b><div class="thermo"><i style="width:'+b.temp+'%"></i></div><div class="fm">站上月線 '+b.a20+'%・站上季線 '+b.a60+'%・上漲 '+b.adv+' 家／下跌 '+b.dec+' 家・接近 52 週高 '+b.hi+' 家／低 '+b.lo+' 家（樣本 '+b.n+' 檔個股）<br>偏熱代表多數個股站上均線、漲多後需留意回檔；偏冷代表多數股票弱勢，跌深後才有機會反彈。</div></div>';}
+ var PH=[['復甦期','景氣落底回升、利率偏低，股價通常先於基本面上漲。','金融、營建資產、半導體與電子零組件（庫存回補）、景氣循環股','基本面尚未全面好轉，震盪較多'],
+  ['擴張期','景氣與企業獲利同步成長。','半導體、電子、AI 供應鏈、航運、鋼鐵與原物料','評價墊高、追高風險上升'],
+  ['趨緩期','成長放緩，通膨與利率壓力浮現。','防禦型：食品、電信、公用事業、高殖利率股','景氣循環股與高本益比股容易回檔'],
+  ['衰退／築底期','獲利下滑、市場悲觀，常見殺低與急彈。','防禦型、現金流穩定、醫療與公用事業','趨勢尚未翻轉前反彈可能失敗，宜保守']];
+ h+='<div class="intro"><b>🔄 景氣四階段與常見領漲族群</b>（一般性歷史規律，不保證重現）</div>'+PH.map(function(p){var on=cy&&cy.phase==p[0];return'<div class="fcard" style="'+(on?'border:2px solid var(--acc)':'')+'"><b>'+(on?'📍 ':'')+p[0]+'</b>'+(on?'<span class="pill" style="--c:var(--acc)">目前推估</span>':'')+'<div class="es">'+p[1]+'<br><b>常見領漲：</b>'+p[2]+'<br><b>注意：</b>'+p[3]+'</div></div>';}).join('');
+ return h;}
 function flowRow(r,mx){var up=r.d>=0;return'<div class="fcard"><div class="fh"><span>'+esc(r.ind)+'</span><span class="'+cl(r.d)+'">'+(up?'+':'')+r.d.toFixed(2)+' pp</span></div><div class="bar"><i class="'+(up?'bi':'bo')+'" style="width:'+Math.max(4,Math.abs(r.d)/mx*100).toFixed(0)+'%"></i></div>'+
  '<div class="fm">成交值 '+r.tn+' 億（占比 '+r.share+'%，近5日均 '+r.avg+'%）・量能 '+f2(r.ratio)+'x・加權漲跌 '+cpc(r.pct)+'<br>主力：'+(r.top||[]).map(function(s){return'<a data-a="open" data-k="tw:'+esc(s.code)+'">'+esc(s.name)+' '+sg(s.pct)+'</a>';}).join(' ')+'</div></div>';}
 function vFlow(){var f=DATA.D&&DATA.D.flow;if(!f)return empty('資金流向資料尚未產生<br>（需要累積足夠的成交資料，請重新執行一次 Actions）');
@@ -73,9 +124,12 @@ function drawTW(){load('S').then(function(){var S=DATA.S,el=$('rl');if(!el)retur
  el.innerHTML='<div class="cnt">'+note+'共 '+L.length+' 檔'+(L.length>60?'，顯示前 60 檔':'')+'</div>'+(L.slice(0,60).map(function(c){var x=S.s[c];return twRow(c,x,(x.i||'')+(x.x?(x.i?'・':'')+x.x:''));}).join('')||empty('找不到符合的標的'));ani();});}
 
 /* ---------- 美股 ---------- */
+var IXS=['^DJI','^GSPC','^SOX','^IXIC','^KS11','^N225'];
 function vUS(){var m=DATA.M,h=qbanner();
- if(m&&m.items.length){h+='<div class="strip">'+m.items.filter(function(x){return x.sym!='^TWII';}).map(function(x){x=mkItem(x.sym);var y=x.sym=='^TNX',v=y?x.ch:x.p;return'<div class="mc"><small>'+x.e+' '+esc(x.name)+'</small><b>'+x.c.toLocaleString()+'</b><span class="'+cl(x.p)+'" style="font-size:12px;font-weight:600">'+(x.p>=0?'▲ ':'▼ ')+Math.abs(v).toFixed(y?3:2)+(y?' 點':'%')+'</span>'+spark(x.sp,x.p>=0)+'</div>';}).join('')+'</div>';
+ if(m&&m.items.length){h+='<div class="intro" style="margin-bottom:0">點指數卡片：看它追蹤什麼、走勢圖與技術面解讀</div><div class="strip">'+IXS.map(mkItem).filter(Boolean).map(function(x){return'<div class="mc" data-a="open" data-k="ix:'+esc(x.sym)+'"><small>'+x.e+' '+esc(x.name)+' ⓘ</small><b>'+x.c.toLocaleString()+'</b><span class="'+cl(x.p)+'" style="font-size:12px;font-weight:600">'+chgTxt(x.p,x.ch,x.c>1000?0:2)+'</span>'+spark(x.sp,x.p>=0)+'</div>';}).join('')+'</div>';
  if(m.hint&&m.hint.length)h+='<div class="hint">'+m.hint.map(esc).join('<br>')+'</div>';}
+ var ev=evList().filter(function(e){return e.mk!='tw'&&e.days<=14;}).slice(0,3);
+ if(ev.length)h+='<div class="hint" data-a="sub" data-v="cal" style="border-left-color:#7e57c2">🗓 <b>美股近期事件</b><br>'+ev.map(function(e){return'• '+e.md+' '+esc(e.title)+'　<span class="s2">'+whenTxt(e.days)+'</span>';}).join('<br>')+'</div>';
  return h+'<div class="sbox"><input id="q" type="search" placeholder="🔍 搜尋美股代號或中文名，如 NVDA、特斯拉、SPCX" value="'+esc(ST.q)+'"></div><div id="uc"></div><div id="rl"></div>';}
 function drawUS(){load('U').then(function(){var U=DATA.U,el=$('rl');if(!el)return;if(!U||!U.items.length){el.innerHTML=empty('尚無美股資料');return;}
  var cats=['全部'];U.items.forEach(function(x){if(cats.indexOf(x.cat)<0)cats.push(x.cat);});$('uc').innerHTML=chips(cats,ST.cat,'cat');
@@ -91,26 +145,25 @@ function toolbar(items,extra){var cats=['全部'],cnt={'全部':items.length};it
 function filt(items){return items.map(function(x,i){x._i=i;return x;}).filter(function(x){return(ST.ncat=='全部'||(x.cat||'其他')==ST.ncat)&&(ST.nimp=='全部'||(x.dir||'中性')==ST.nimp);});}
 function dirBadge(d){d=d||'中性';return'<span class="badge '+(d=='偏多'?'b-up':d=='偏空'?'b-dn':'b-mid')+'">'+(d=='中性'?'影響中性':'對股市'+d)+'</span>';}
 function dirColor(d){return d=='偏多'?'#d9434b':d=='偏空'?'#2a9d62':'#8a93a3';}
+function proCon(x){return(x.pro||x.con)?'<div class="pcw">'+(x.pro?'<div class="pro"><b>👍 利多面</b>'+esc(x.pro)+'</div>':'')+(x.con?'<div class="con"><b>👎 利空面／風險</b>'+esc(x.con)+'</div>':'')+'</div>':'';}
+function impBox(sec,why){return(sec||why)?'<div class="imp"><b>📊 對股市的影響</b>'+(sec?'可能影響：'+esc(sec)+'<br>':'')+esc(why||'')+'</div>':'';}
 function twNews(N){if(!N||!N.items.length)return empty('尚無新聞資料');
  var L=filt(N.items);
- return'<div class="hint"><b>📰 今日重點'+(N.mode=='ai'?'（AI 分析）':'（規則式推測）')+'</b><br>'+(N.summary||[]).map(esc).join('<br>')+'</div>'+toolbar(N.items)+
- '<div class="cnt">依標題做的推測，可能判斷錯誤；點標題到原網站看全文。共 '+L.length+' 則</div>'+
+ return'<div class="hint"><b>📰 台灣／總經 重點 '+N.items.length+' 則'+(N.mode=='ai'?'（AI 分析）':'（規則式推測）')+'</b><br>'+(N.summary||[]).map(esc).join('<br>')+'</div>'+toolbar(N.items)+
+ '<div class="cnt">依重要程度排序（★ 越多越重要）；依標題推測，可能判斷錯誤，點標題看原文。共 '+L.length+' 則</div>'+
  (L.map(function(x){var lk=/^https?:/.test(x.link)?x.link:'#';
- return'<div class="card" style="--c:'+dirColor(x.dir)+'"><div class="top2"><div class="s2">'+esc(x.cat)+' · '+esc(x.src||'')+' · '+esc(x.t)+'</div>'+dirBadge(x.dir)+'</div><a class="nt" href="'+esc(lk)+'" target="_blank" rel="noopener">'+esc(x.title)+'</a>'+
- ((x.sectors||x.why)?'<div class="imp"><b>📊 對股市的影響</b>'+(x.sectors?'可能影響：'+esc(x.sectors)+'<br>':'')+esc(x.why||'')+'</div>':'')+'</div>';}).join('')||empty('這個分類目前沒有新聞'));}
+ return'<div class="card" style="--c:'+dirColor(x.dir)+'"><div class="top2"><div class="s2">'+esc(x.cat)+' · '+esc(x.src||'')+' · '+esc(x.t)+(x.n>1?' · '+x.n+' 家報導':'')+'</div>'+dirBadge(x.dir)+'</div><span class="stars">'+stars(x.imp)+'</span><a class="nt" href="'+esc(lk)+'" target="_blank" rel="noopener">'+esc(x.title)+'</a>'+impBox(x.sectors,x.why)+proCon(x)+'</div>';}).join('')||empty('這個分類目前沒有新聞'));}
 function zh(t){return t?'<div class="zh'+(ST.mask?' mk':'')+'" data-a="reveal">'+esc(t)+'</div>':'';}
 function enNews(E){if(!E||!E.items.length)return empty('尚無英文新聞資料');
  var L=filt(E.items),h='';
- if(E.brief&&E.brief.length)h+='<div class="hint"><b>🌐 今日國際重點（對股市）</b><br>'+E.brief.map(esc).join('<br>')+'</div>';
- else h+='<div class="hint"><b>🌐 國際英文新聞</b><br>每則都有「對股市的影響」（規則式推測）。要自動中文翻譯與單字，請設定 ANTHROPIC_API_KEY；沒設定可點每則的「🌐 翻譯」。</div>';
+ if(E.brief&&E.brief.length)h+='<div class="hint"><b>🌐 今日國際重點 '+E.items.length+' 則（對股市）</b><br>'+E.brief.map(esc).join('<br>')+'</div>';
+ else h+='<div class="hint"><b>🌐 國際英文新聞 重點 '+E.items.length+' 則</b><br>每則都有「對股市的影響」與利弊（規則式推測）。要自動中文翻譯與單字，請設定 ANTHROPIC_API_KEY；沒設定可點每則的「🌐 翻譯」。</div>';
  h+=toolbar(E.items,'<div class="cps"><button class="cp'+(ST.mask?' on':'')+'" data-a="mask">🙈 學習模式：遮住中文'+(ST.mask?'（已開）':'')+'</button></div>');
- return h+'<div class="cnt">共 '+L.length+' 則・點「原文摘要・中文・單字」展開；開學習模式後點模糊的中文看答案</div>'+(L.map(function(x){var lk=/^https?:/.test(x.link)?x.link:'#',gt='https://translate.google.com/?sl=en&tl=zh-TW&op=translate&text='+encodeURIComponent(x.title+'\n'+(x.sum||''));
+ return h+'<div class="cnt">依重要程度排序（★ 越多越重要）・共 '+L.length+' 則・開學習模式後點模糊的中文看答案</div>'+(L.map(function(x){var lk=/^https?:/.test(x.link)?x.link:'#',gt='https://translate.google.com/?sl=en&tl=zh-TW&op=translate&text='+encodeURIComponent(x.title+'\n'+(x.sum||''));
  var vo=(x.vo&&x.vo.length)?'<div>'+x.vo.map(function(v){return'<span class="vo"><b>'+esc(v.w)+'</b> <span class="'+(ST.mask?'zh mk':'')+'" data-a="reveal" style="background:none;padding:0;margin:0">'+esc(v.zh)+'</span></span>';}).join('')+'</div>':'';
- return'<div class="card" style="--c:'+dirColor(x.dir)+'"><div class="top2"><div class="s2">'+esc(x.cat||'其他')+' · '+esc(x.src)+' · '+esc(x.t)+'</div>'+dirBadge(x.dir)+'</div><div class="et">'+esc(x.title)+'</div>'+zh(x.zt)+
- ((x.im||x.sec)?'<div class="imp"><b>📊 對股市的影響</b>'+(x.sec?'可能影響：'+esc(x.sec)+'<br>':'')+esc(x.im||'')+'</div>':'')+
+ return'<div class="card" style="--c:'+dirColor(x.dir)+'"><div class="top2"><div class="s2">'+esc(x.cat||'其他')+' · '+esc(x.src)+' · '+esc(x.t)+(x.n>1?' · '+x.n+' 家報導':'')+'</div>'+dirBadge(x.dir)+'</div><span class="stars">'+stars(x.imp)+'</span><div class="et">'+esc(x.title)+'</div>'+zh(x.zt)+impBox(x.sec,x.im)+proCon(x)+
  '<details><summary>原文摘要・中文・單字</summary>'+(x.sum?'<div class="es">'+esc(x.sum)+'</div>':'')+zh(x.zs)+vo+'</details>'+
  '<div class="tools"><button data-a="speak" data-i="'+x._i+'">🔊 朗讀</button><a href="'+esc(gt)+'" target="_blank" rel="noopener">🌐 翻譯</a><a href="'+esc(lk)+'" target="_blank" rel="noopener">📄 原文</a></div></div>';}).join('')||empty('這個分類目前沒有新聞'));}
-
 /* ---------- 自選 ---------- */
 function vMy(){return qbanner()+'<div id="rl">'+empty('載入中…')+'</div>';}
 function drawMy(){load('S','U').then(function(){var el=$('rl');if(!el)return;var ks=wl(),h='';
@@ -143,34 +196,43 @@ function drawChart(){var el=$('ch'),cu=ST.cur;if(!el||!cu)return;var c=cu.c;if(!
 function openDetail(k){var p=k.split(':'),id=p.slice(1).join(':');ST.open=true;
  $('dt').className='sheet on';$('dt').innerHTML='<div class="sb"><button data-a="back">←</button><span class="st">載入中…</span></div><div class="sc">'+empty('載入中…')+'</div>';
  try{history.pushState({dt:1},'');}catch(e){}
- if(p[0]=='tw')load('S','H').then(function(){showTW(id);});else load('U').then(function(){showUS(id);});}
+ if(p[0]=='tw')load('S','H').then(function(){showTW(id);});else if(p[0]=='ix')load('M').then(function(){showIX(id);});else load('U').then(function(){showUS(id);});}
 function closeDetail(){ST.open=false;$('dt').className='sheet';ST.cur=null;if(ST.tab=='my')drawMy();}
 function starBtn(k){return'<button data-a="tog" data-k="'+esc(k)+'">'+(has(k)?'★ 已自選':'☆ 加自選')+'</button>';}
 function info(list){return'<div class="grid">'+list.map(function(x){return'<div><small>'+x[0]+'</small><b>'+x[1]+'</b></div>';}).join('')+'</div>';}
-function signal(x){var g=TAGS[x.t]||TAGS.none,ck=x.ck||'',n=0,i,h='';for(i=0;i<ck.length;i++)if(ck[i]=='1')n++;
+function signal(x){var g=TAGS[x.t]||TAGS.none,ck=x.ck||'',n=0,i,h='',N=ck.length;for(i=0;i<N;i++)if(ck[i]=='1')n++;
  h+='<div class="box2" style="--c:'+g.c+'"><h3>技術面解讀</h3><span class="pill">'+g.e+' '+g.t+'</span>';
  if(x.b)h+='<div class="buy">💡 <b>觀察重點</b>　'+esc(x.b)+(x.s?'<br>技術價位參考：'+f2(x.s,1):'')+'</div>';
  if(x.w&&x.w.length)h+='<h3 style="margin-top:12px">為什麼是這個狀態？</h3><ul>'+x.w.map(function(i){return'<li>'+esc(i)+'</li>';}).join('')+'</ul>';
- if(ck.length==6){var lab=n>=5?'技術面偏強':n>=3?'中性偏多':n>=1?'中性偏弱':'技術面偏弱';
-  h+='<h3 style="margin-top:12px">6 項技術檢查：'+n+' / 6（'+lab+'）</h3><div class="meter">'+[0,1,2,3,4,5].map(function(j){return'<i class="'+(j<n?'on':'')+'"></i>';}).join('')+'</div><div class="ck">'+CKL.map(function(t,j){return'<div><span>'+(ck[j]=='1'?'✅':'⬜')+'</span><span>'+t+'</span></div>';}).join('')+'</div>';}
+ if(N>=5){var r=n/N,lab=r>=.8?'技術面偏強':r>=.5?'中性偏多':r>0?'中性偏弱':'技術面偏弱';
+  h+='<h3 style="margin-top:12px">'+N+' 項技術檢查：'+n+' / '+N+'（'+lab+'）</h3><div class="meter">'+ck.split('').map(function(c,j){return'<i class="'+(j<n?'on':'')+'"></i>';}).join('')+'</div><div class="ck">'+(x.ckl||CKL).slice(0,N).map(function(t,j){return'<div><span>'+(ck[j]=='1'?'✅':'⬜')+'</span><span>'+t+'</span></div>';}).join('')+'</div>';}
  else h+='<div class="s2" style="margin-top:8px">上市（櫃）時間較短，資料不足，無法完整計算技術指標。</div>';
  return h+'</div>';}
 function chartBox(){return'<div class="box2"><h3>走勢圖（收盤）</h3><div id="ch"></div><div class="rng">'+[[22,'1個月'],[66,'3個月'],[100,'近100日']].map(function(r){return'<button class="cp'+(ST.rng==r[0]?' on':'')+'" data-a="rng" data-v="'+r[0]+'">'+r[1]+'</button>';}).join('')+'</div><div class="lgd"><i style="background:#d9434b"></i>收盤<i style="background:#f9a825"></i>MA20<i style="background:#3b6fe0"></i>MA60<i style="background:#ef6c00"></i>技術價位</div></div>';}
-function sheet(title,key,html){$('dt').innerHTML='<div class="sb"><button data-a="back">←</button><span class="st">'+esc(title)+'</span>'+starBtn(key)+'</div><div class="sc">'+html+'</div>';$('dt').scrollTop=0;drawChart();}
+function sheet(title,key,html){$('dt').innerHTML='<div class="sb"><button data-a="back">←</button><span class="st">'+esc(title)+'</span>'+(key?starBtn(key):'')+'</div><div class="sc">'+html+'</div>';$('dt').scrollTop=0;drawChart();}
+function twHead(code){var x=DATA.S&&DATA.S.s[code];if(!x)return'';var q=qtw(code),price=q?q[0]:x.c,pct=q?q[1]:x.p;return'<span class="big '+cl(pct)+'">'+f2(price)+'</span><span class="bp '+cl(pct)+'">'+chgTxt(pct,q&&q[2]!=null?q[2]:x.cg)+'</span>';}
 function showTW(code){var S=DATA.S,x=S&&S.s[code];if(!x){sheet('找不到','tw:'+code,empty('找不到這檔標的'));return;}
  var H=DATA.H,q=qtw(code),c=H&&H.s[code]?H.s[code].slice():null,d=H&&H.d?H.d.slice():null,price=q?q[0]:x.c,pct=q?q[1]:x.p;
  if(q&&c&&d&&DATA.Q.tw_d>(DATA.D.date||'')){c.push(q[0]);d.push(DATA.Q.tw_d.slice(5));}
  ST.cur={c:c,d:d,lv:x.s?[{v:x.s,t:'技術價位',c:'#ef6c00'}]:[]};
- sheet(x.n+' '+code,'tw:'+code,'<div><span class="big '+cl(pct)+'">'+f2(price)+'</span><span class="bp '+cl(pct)+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(2)+'%</span></div><div class="s2">'+[x.e?'ETF':'',x.i,x.x].filter(Boolean).join('・')+(q?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
+ ST.curKey=code;sheet(x.n+' '+code,'tw:'+code,'<div id="dp">'+twHead(code)+'</div><div class="s2">'+[x.e?'ETF':'',x.i,x.x].filter(Boolean).join('・')+(q?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
  chartBox()+signal(x)+'<div class="box2"><h3>個股資訊</h3>'+info([['52週高／低',f2(x.h)+' / '+f2(x.l)],['距52週高',x.h?sg((price/x.h-1)*100):'—'],['近5日',sg(x.g5)],['近20日',sg(x.g20)],['成交量',x.q!=null?lots(x.q)+' 張':'—'],['成交值',x.tn!=null?f2(x.tn)+' 億':'—'],['本益比',x.e?'—':f2(x.pe,1)],['殖利率',x.y!=null?f2(x.y)+'%':'—'],['股價淨值比',x.e?'—':f2(x.pb)],['RSI(14)',f2(x.r,1)],['量比',x.v!=null?x.v+'x':'—'],['月線／季線',f2(x.a)+' / '+f2(x.z)]])+
  '<div class="lk" style="margin-top:12px"><a href="https://tw.stock.yahoo.com/quote/'+code+(x.x=='上櫃'?'.TWO':'.TW')+'" target="_blank" rel="noopener">Yahoo 股市</a><a href="https://goodinfo.tw/tw/StockDetail.asp?STOCK_ID='+code+'" target="_blank" rel="noopener">Goodinfo</a></div></div><div class="s2" style="margin-top:12px;line-height:1.6">以上為技術面整理，不構成投資建議；技術指標以最近一次收盤分析為準。本益比等官方資料若欄位缺漏會顯示「—」。</div>');}
+function erBox(u){var e=u.er;if(!e||(!e.next&&!e.last))return'';var h='<div class="box2"><h3>財報／法說</h3>';
+ if(e.next)h+='<div class="es" style="margin:0">下次公布約 <b>'+e.next.slice(5).replace('-','/')+'</b>（日期為估計，以公司公告為準）</div>';
+ if(e.last){var r=e.last;h+='<div class="fm" style="font-size:13px;margin-top:8px">最近一次 '+r.d.slice(5).replace('-','/')+'：EPS 實際 <b>'+f2(r.act)+'</b> vs 預期 '+f2(r.est)+'（驚喜 '+(r.sur==null?'—':(r.sur>=0?'+':'')+r.sur+'%')+'）・兩日反應 '+(r.rx==null?'—':cpc(r.rx))+'</div>'+(r.note?'<div class="imp"><b>📊 解讀</b>'+esc(r.note)+(r.tw?'<br>台灣相關：'+esc(r.tw):'')+'</div>':'');}
+ return h+'</div>';}
 function showUS(sym){var U=DATA.U,u=U&&U.items.filter(function(y){return y.sym==sym;})[0];if(!u){sheet('找不到','us:'+sym,empty('找不到這檔標的'));return;}
  var q=qus(sym),p=q?q[1]:(u.p||0),price=q?q[0]:u.c;
  ST.cur={c:u.hist,d:U.dates,lv:u.s?[{v:u.s,t:'技術價位',c:'#ef6c00'}]:[]};
- sheet(u.n+' '+u.sym,'us:'+sym,'<div><span class="big '+cl(p)+'">'+f2(price)+'</span><span class="bp '+cl(p)+'">'+(p>=0?'▲ ':'▼ ')+Math.abs(p).toFixed(2)+'%</span></div><div class="s2">美元・'+esc(u.cat)+(q?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
- chartBox()+signal(u)+'<div class="box2"><h3>基本資訊</h3>'+info([['市值',big(u.cap)],['類別',esc(u.cat)],['52週高／低',f2(u.h)+' / '+f2(u.l)],['距52週高',u.h?sg((price/u.h-1)*100):'—'],['近5日',sg(u.g5)],['近20日',sg(u.g20)],['RSI(14)',f2(u.r,1)],['月線／季線',f2(u.a)+' / '+f2(u.z)]])+
+ sheet(u.n+' '+u.sym,'us:'+sym,'<div><span class="big '+cl(p)+'">'+f2(price)+'</span><span class="bp '+cl(p)+'">'+chgTxt(p,q&&q[2]!=null?q[2]:u.cg)+'</span></div><div class="s2">美元・'+esc(u.cat)+(q?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
+ chartBox()+signal(u)+erBox(u)+'<div class="box2"><h3>基本資訊</h3>'+info([['市值',big(u.cap)],['類別',esc(u.cat)],['52週高／低',f2(u.h)+' / '+f2(u.l)],['距52週高',u.h?sg((price/u.h-1)*100):'—'],['近5日',sg(u.g5)],['近20日',sg(u.g20)],['RSI(14)',f2(u.r,1)],['月線／季線',f2(u.a)+' / '+f2(u.z)]])+
  '<div class="lk" style="margin-top:12px"><a href="https://finance.yahoo.com/quote/'+encodeURIComponent(sym)+'" target="_blank" rel="noopener">Yahoo Finance</a></div></div><div class="s2" style="margin-top:12px;line-height:1.6">技術指標以最近一次收盤分析為準；以上為技術面整理，不構成投資建議。</div>');}
-
+function showIX(sym){var M=DATA.M,x=mkItem(sym);if(!x){sheet('找不到',null,empty('找不到這個指標'));return;}
+ ST.cur={c:x.hist,d:M.dates,lv:[]};var y=sym=='^TNX';
+ sheet(x.name,null,'<div><span class="big '+cl(x.p)+'">'+x.c.toLocaleString()+'</span><span class="bp '+cl(x.p)+'">'+chgTxt(x.p,x.ch,x.c>1000?0:y?3:2)+'</span></div><div class="s2">'+esc(x.sym)+'・資料日 '+esc(x.d)+(qix(sym)?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
+ '<div class="box2"><h3>📖 這是在追蹤什麼？</h3><div class="es" style="margin-top:0">'+esc(x.about)+'</div><h3 style="margin-top:12px">🔍 怎麼看</h3><div class="es" style="margin-top:0">'+esc(x.watch)+'</div><h3 style="margin-top:12px">🇹🇼 與台股的關係</h3><div class="es" style="margin-top:0">'+esc(x.tw)+'</div></div>'+
+ chartBox()+signal(x)+'<div class="box2"><h3>統計</h3>'+info([['52週高／低',f2(x.h)+' / '+f2(x.l)],['距52週高',x.h?sg((x.c/x.h-1)*100):'—'],['近5日',sg(x.g5)],['近20日',sg(x.g20)],['RSI(14)',f2(x.r,1)],['月線／季線',f2(x.a)+' / '+f2(x.z)]])+'</div><div class="s2" style="margin-top:12px;line-height:1.6">指數技術解讀以價格與均線、MACD、RSI 計算（不含成交量檢查），僅供參考，不構成投資建議。</div>');}
 /* ---------- 主流程 ---------- */
 function countUp(){[].forEach.call(document.querySelectorAll('[data-n]'),function(e){var n=+e.dataset.n,t0=Date.now();if(!n||!window.requestAnimationFrame)return;(function f(){var r=Math.min(1,(Date.now()-t0)/700);e.textContent=Math.round(n*(1-Math.pow(1-r,3)));if(r<1)requestAnimationFrame(f);})();});}
 function render(){
@@ -190,6 +252,7 @@ function act(a,d){
  else if(a=='cat'){ST.cat=d.v;drawUS();}
  else if(a=='nsub'){ST.nsub=d.v;ST.ncat='全部';ST.nimp='全部';render();}
  else if(a=='ncat'){ST.ncat=d.v;drawNews();}
+ else if(a=='ccat'){ccat=d.v;render();}
  else if(a=='nimp'){ST.nimp=d.v;drawNews();}
  else if(a=='mask'){ST.mask=!ST.mask;drawNews();}
  else if(a=='reveal'){if(d.el)d.el.className=d.el.className.replace(' mk','');}
@@ -206,11 +269,19 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-a]')
 document.addEventListener('input',function(e){if(e.target.id!='q')return;ST.q=e.target.value;if(ST.tab=='tw')drawTW();else if(ST.tab=='us')drawUS();});
 window.addEventListener('popstate',function(){if(ST.open)closeDetail();});
 try{if(localStorage.getItem('ack1'))$('dis').style.display='none';}catch(e){}
+function refreshLive(){
+ var b=$('qbn');if(b)b.innerHTML=qbInner();
+ var w=$('twii');if(w)w.innerHTML=twiiHtml();
+ if(ST.open&&ST.curKey&&$('dp'))$('dp').innerHTML=twHead(ST.curKey);
+ [].forEach.call(document.querySelectorAll('.row[data-code]'),function(r){var k=r.dataset.k||'';if(k.indexOf('tw:')!=0)return;var q=qtw(r.dataset.code),px=r.querySelector('.px'),pc=r.querySelector('.pc');if(!q||!px||!pc)return;px.textContent=f2(q[0]);px.className='px '+cl(q[1]);pc.className='pc '+cl(q[1]);pc.textContent=chgTxt(q[1],q[2]);});}
+function inHours(){var d=new Date(Date.now()+8*3600000),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return w>=1&&w<=5&&m>=535&&m<=820;}
+function pollLive(){if(document.hidden||!inHours())return;loadL().then(refreshLive);}
 restore();render();
-Promise.all([load('D'),load('M'),loadQ()]).then(function(){var d=DATA.D;$('meta').textContent=d?'資料日 '+d.date+'　更新 '+d.updated:'尚無資料，請先到 Actions 手動執行一次';
+Promise.all([load('D'),load('M'),load('V'),loadQ()]).then(function(){var d=DATA.D;$('meta').textContent=d?'資料日 '+d.date+'　更新 '+d.updated:'尚無資料，請先到 Actions 手動執行一次';
  var items=['^SOX','^IXIC','^DJI'].map(function(s){return mkItem(s);}).filter(Boolean);
  if(items.length)$('mk').textContent='🌎 '+items.map(function(x){return({'^SOX':'費半','^IXIC':'那指','^DJI':'道瓊'})[x.sym]+' '+(x.p>=0?'+':'')+x.p.toFixed(2)+'%';}).join('　');
- render();});
+ render();pollLive();});
+setInterval(pollLive,20000);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 window.__app={act:act,render:render,ST:ST,DATA:DATA};
 })();
