@@ -73,6 +73,12 @@ svg text{font-family:inherit}
 .box{background:var(--card);border-radius:20px;padding:20px;max-width:420px;max-height:90vh;overflow:auto}.box h2{margin:0 0 10px;font-size:18px}
 .box ul{padding-left:18px;list-style:disc}.box li{padding-left:0}.box li::before{content:none}
 .box button{width:100%;margin-top:14px;padding:12px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:16px}
+#pres.pres,.pres{display:flex;align-items:center;gap:7px;font-size:12px;background:rgba(255,255,255,.2);padding:4px 11px;border-radius:99px;white-space:nowrap}
+.pres i{width:11px;height:11px;border-radius:50%;background:#b0bec5;box-shadow:0 0 0 3px rgba(255,255,255,.28)}
+.pres i.g{background:#3ddc84}.pres i.y{background:#ffd54f}.pres i.r{background:#ff5252}
+.pres i.g,.pres i.y,.pres i.r{animation:pulse 1.8s infinite}.pres b{font-size:14px}
+.stale{margin:10px 14px 0;padding:9px 12px;border-radius:12px;background:rgba(249,168,37,.16);font-size:12px;line-height:1.55}
+.toast{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:50;background:#37474f;color:#fff;border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.ln{stroke-dashoffset:0}}
 
 .stars{color:#f5a623;font-size:12px;letter-spacing:1px;display:block;margin-top:6px}
