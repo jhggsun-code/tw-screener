@@ -89,3 +89,5 @@ svg text{font-family:inherit}
 .light{display:flex;gap:4px;margin:12px 0 8px}.light div{flex:1;border-radius:10px;padding:8px 2px;text-align:center;color:#fff;font-size:12px}.light small{display:block;font-size:10px}
 .thermo{height:12px;border-radius:6px;background:linear-gradient(90deg,#3b6fe0,#2a9d62,#ffb300,#d9434b);margin:10px 0;position:relative;overflow:hidden}.thermo i{position:absolute;right:0;top:0;bottom:0;background:var(--card);opacity:.85}
 .mc[data-a]{cursor:pointer}
+
+.dim{opacity:.55}
