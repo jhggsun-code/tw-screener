@@ -13,7 +13,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: 解壓縮更新檔
@@ -34,6 +34,7 @@ jobs:
       - run: pip install pandas numpy requests yfinance
       - run: python screener.py
         env:
+          WAIT_OFFICIAL: ${{ github.event_name == 'schedule' && '1' || '' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
