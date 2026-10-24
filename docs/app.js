@@ -11,7 +11,16 @@ function $(i){return document.getElementById(i);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function J(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text?r.text():r.json();}).then(function(t){if(typeof t!='string')return t;
  try{return JSON.parse(t);}catch(e){try{return JSON.parse(t.replace(/(:|\[|,)\s*-?(NaN|Infinity)(?=\s*[,\]}])/g,'$1null'));}catch(e2){throw new Error('資料格式錯誤');}}});}
-function load(){var a=[].slice.call(arguments);return Promise.all(a.map(function(n){if(DATA[n]!==undefined)return DATA[n];return J(URLS[n]).then(function(d){DATA[n]=d;return d;}).catch(function(e){DATA[n]=null;(DATA._e=DATA._e||{})[n]=String(e&&e.message||e);return null;});}));}
+function norm(n,d){/* 缺漏欄位補預設值，避免單一欄位缺失就讓整頁出錯 */
+ try{if(!d||typeof d!='object')return d;
+  if(n=='D'){['up','dip','gain','act'].forEach(function(k){if(d[k]&&!Array.isArray(d[k].stocks))d[k].stocks=[];});var f=d.flow;if(f){['inflow','outflow','rows'].forEach(function(k){f[k]=(f[k]||[]).filter(Boolean);});}}
+  else if(n=='U'){d.items=(d.items||[]).filter(Boolean).map(function(u){u.hist=u.hist||[];u.w=u.w||[];return u;});}
+  else if(n=='M'){d.items=(d.items||[]).filter(Boolean).map(function(x){x.sp=x.sp||[];x.hist=x.hist||[];return x;});}
+  else if(n=='N'||n=='E'){d.items=(d.items||[]).filter(Boolean);}
+  else if(n=='S'){d.s=d.s||{};}
+  else if(n=='V'){d.events=d.events||[];}
+ }catch(e){}return d;}
+function load(){var a=[].slice.call(arguments);return Promise.all(a.map(function(n){if(DATA[n]!==undefined)return DATA[n];return J(URLS[n]).then(function(d){d=norm(n,d);DATA[n]=d;return d;}).catch(function(e){DATA[n]=null;(DATA._e=DATA._e||{})[n]=String(e&&e.message||e);return null;});}));}
 function loadQ(){var h=location.hostname,p=(location.pathname.split('/')[1]||'');if(!/github\.io$/.test(h)||!p){DATA.Q=null;return Promise.resolve();}
  return fetch('https://raw.githubusercontent.com/'+h.split('.')[0]+'/'+p+'/quotes/quotes.json?t='+Math.floor(Date.now()/60000)).then(function(r){return r.json();}).then(function(q){DATA.Q=q;}).catch(function(){DATA.Q=null;});}
 function wl(){try{return JSON.parse(localStorage.getItem('wl')||'[]').map(function(k){return k.indexOf(':')<0?'tw:'+k:k;});}catch(e){return[];}}
@@ -19,6 +28,7 @@ function setwl(a){try{localStorage.setItem('wl',JSON.stringify(a));}catch(e){}}
 function has(k){return wl().indexOf(k)>=0;}
 function saveSt(){try{var o={};PK.forEach(function(k){o[k]=ST[k];});localStorage.setItem('st2',JSON.stringify(o));}catch(e){}}
 function restore(){try{var o=JSON.parse(localStorage.getItem('st2')||'{}');PK.forEach(function(k){if(o[k]!==undefined)ST[k]=o[k];});}catch(e){}}
+function ln(n){return(n==null||isNaN(n))?'—':Number(n).toLocaleString();}
 function f2(n,d){return(n==null||isNaN(n))?'—':Number(n).toFixed(d==null?2:d);}
 function sg(p){return(p==null||isNaN(p))?'—':(p>=0?'+':'')+Number(p).toFixed(2)+'%';}
 function cl(p){return p>=0?'u':'d';}
@@ -59,7 +69,7 @@ function evList(){var V=DATA.V,L=[];if(!V)return L;(V.events||[]).forEach(functi
  ((V.er||{}).up||[]).forEach(function(e){L.push({d:e.d,md:e.d.slice(5).replace('-','/'),wd:'',mk:'er',title:e.n+' 財報／法說',tip:'公布日期為估計，以公司公告為準。'+(e.tw?'台灣相關：'+e.tw+'。':'')});});
  L.forEach(function(e){e.days=dleft(e.d);});return L.filter(function(e){return inWeek(e.days);}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0;});}
 function whenTxt(n){return n<0?'已過':n==0?'今天':n==1?'明天':'還有 '+n+' 天';}
-function twiiHtml(){var tw=mkItem('^TWII');return'📈 台股加權 <b>'+(tw?tw.c.toLocaleString():'—')+'</b> '+(tw?'<span class="'+cl(tw.p)+'">'+chgTxt(tw.p,tw.ch,2)+'</span>':'');}
+function twiiHtml(){var tw=mkItem('^TWII');return'📈 台股加權 <b>'+(tw?ln(tw.c):'—')+'</b> '+(tw?'<span class="'+cl(tw.p)+'">'+chgTxt(tw.p,tw.ch,2)+'</span>':'');}
 function backChip(){return'<div class="cps"><button class="cp" data-a="sub" data-v="pick">← 返回今日</button></div>';}
 function vHome(){
  var d=DATA.D;if(!d)return empty('尚無資料'+(DATA._e&&DATA._e.D?'<br>原因：data.json '+esc(DATA._e.D):'')+'<br>請先到 GitHub 的 Actions 手動執行一次，或見 SOP「畫面顯示尚無資料」');
@@ -69,7 +79,7 @@ function vHome(){
  if(ST.sub=='cyc')return h+backChip()+vCyc();
  var snap='<span id="twii">'+twiiHtml()+'</span>';
  if(b)snap+='<br>🌡 市場溫度 <b>'+b.label+'</b>（上漲 '+b.adv+'／下跌 '+b.dec+' 家）';
- if(f)snap+='<br>💧 '+esc(f.headline.split('（')[0]);
+ if(f)snap+='<br>💧 '+esc(String(f.headline||'').split('（')[0]);
  h+='<div class="hint"><b>📌 今日一眼看懂</b><br>'+snap+'</div>';
  var ev=evList().slice(0,5);
  h+='<div class="hint" data-a="sub" data-v="cal" style="border-left-color:#f9a825">🗓 <b>'+weekLabel()+'重點</b><br>'+(ev.length?ev.map(function(e){return(e.days<0?'✓ ':e.days<=1?'⚠️ ':'• ')+e.md+(e.wd?'（'+e.wd+'）':'')+' '+esc(e.title)+'　<span class="s2">'+whenTxt(e.days)+(e.est?'・預估':'')+'</span>';}).join('<br>'):'這一週沒有重要事件')+'<br><span class="s2">點開看影響說明 ›</span></div>';
@@ -105,7 +115,7 @@ function vCyc(){var m=DATA.M||{},b=(DATA.D||{}).breadth,nd=m.ndc,cy=m.cycle,h='<
  if(nd){var cur=nd.light;h+='<div style="margin-top:8px"><span class="big">'+esc(nd.light)+'</span>　綜合判斷分數 <b>'+nd.score+'</b>'+(nd.prev!=null?'（上期 '+nd.prev+'）':'')+'<div class="s2">資料期：'+esc(nd.date)+'</div></div>';}
  else h+='<div class="es">暫時無法自動取得最新燈號（官方開放資料連線失敗）。請到 <a href="https://index.ndc.gov.tw/n/zh_tw/lightscore" target="_blank" rel="noopener" style="color:var(--acc)">國發會景氣指標查詢系統</a> 查看。</div>';
  h+='<div class="light">'+LIGHTS.map(function(l){return'<div style="background:'+l[3]+';opacity:'+(nd&&nd.light==l[0]?1:.45)+'"><b>'+l[0]+'</b><small>'+l[1]+' 分</small></div>';}).join('')+'</div><div class="s2" style="line-height:1.6">燈號每月由國發會公布，屬同時／落後性質：紅燈代表景氣熱絡但要留意過熱與政策緊縮；藍燈代表低迷，歷史上常接近景氣落底，但不代表立刻反轉。</div></div>';
- if(cy)h+='<div class="fcard"><b>🧭 加權指數價格推估：'+esc(cy.phase)+'</b><div class="es">指數 '+cy.last.toLocaleString()+'，季線約 '+cy.ma60.toLocaleString()+'、半年線約 '+cy.ma120.toLocaleString()+'。依指數與季線、半年線的相對位置與季線方向推估，屬價格面推測，不是官方景氣指標。</div></div>';
+ if(cy)h+='<div class="fcard"><b>🧭 加權指數價格推估：'+esc(cy.phase)+'</b><div class="es">指數 '+ln(cy.last)+'，季線約 '+ln(cy.ma60)+'、半年線約 '+ln(cy.ma120)+'。依指數與季線、半年線的相對位置與季線方向推估，屬價格面推測，不是官方景氣指標。</div></div>';
  if(b){h+='<div class="fcard"><b>🌡 市場溫度計：'+b.label+'（'+b.temp+'）</b><div class="thermo"><i style="width:'+b.temp+'%"></i></div><div class="fm">站上月線 '+b.a20+'%・站上季線 '+b.a60+'%・上漲 '+b.adv+' 家／下跌 '+b.dec+' 家・接近 52 週高 '+b.hi+' 家／低 '+b.lo+' 家（樣本 '+b.n+' 檔個股）<br>偏熱代表多數個股站上均線、漲多後需留意回檔；偏冷代表多數股票弱勢，跌深後才有機會反彈。</div></div>';}
  var PH=[['復甦期','景氣落底回升、利率偏低，股價通常先於基本面上漲。','金融、營建資產、半導體與電子零組件（庫存回補）、景氣循環股','基本面尚未全面好轉，震盪較多'],
   ['擴張期','景氣與企業獲利同步成長。','半導體、電子、AI 供應鏈、航運、鋼鐵與原物料','評價墊高、追高風險上升'],
@@ -113,14 +123,14 @@ function vCyc(){var m=DATA.M||{},b=(DATA.D||{}).breadth,nd=m.ndc,cy=m.cycle,h='<
   ['衰退／築底期','獲利下滑、市場悲觀，常見殺低與急彈。','防禦型、現金流穩定、醫療與公用事業','趨勢尚未翻轉前反彈可能失敗，宜保守']];
  h+='<div class="intro"><b>🔄 景氣四階段與常見領漲族群</b>（一般性歷史規律，不保證重現）</div>'+PH.map(function(p){var on=cy&&cy.phase==p[0];return'<div class="fcard" style="'+(on?'border:2px solid var(--acc)':'')+'"><b>'+(on?'📍 ':'')+p[0]+'</b>'+(on?'<span class="pill" style="--c:var(--acc)">目前推估</span>':'')+'<div class="es">'+p[1]+'<br><b>常見領漲：</b>'+p[2]+'<br><b>注意：</b>'+p[3]+'</div></div>';}).join('');
  return h;}
-function flowRow(r,mx){var up=r.d>=0;return'<div class="fcard"><div class="fh"><span>'+esc(r.ind)+'</span><span class="'+cl(r.d)+'">'+(up?'+':'')+r.d.toFixed(2)+' pp</span></div><div class="bar"><i class="'+(up?'bi':'bo')+'" style="width:'+Math.max(4,Math.abs(r.d)/mx*100).toFixed(0)+'%"></i></div>'+
+function flowRow(r,mx){var up=r.d>=0;return'<div class="fcard"><div class="fh"><span>'+esc(r.ind)+'</span><span class="'+cl(r.d)+'">'+(up?'+':'')+f2(r.d)+' pp</span></div><div class="bar"><i class="'+(up?'bi':'bo')+'" style="width:'+Math.max(4,Math.abs(r.d)/mx*100).toFixed(0)+'%"></i></div>'+
  '<div class="fm">成交值 '+r.tn+' 億（占比 '+r.share+'%，近5日均 '+r.avg+'%）・量能 '+f2(r.ratio)+'x・加權漲跌 '+cpc(r.pct)+'<br>主力：'+(r.top||[]).map(function(s){return'<a data-a="open" data-k="tw:'+esc(s.code)+'">'+esc(s.name)+' '+sg(s.pct)+'</a>';}).join(' ')+'</div></div>';}
 function vFlow(){var f=DATA.D&&DATA.D.flow;if(!f)return empty('資金流向資料尚未產生<br>（需要累積足夠的成交資料，請重新執行一次 Actions）');
  var mx=Math.max.apply(null,f.inflow.concat(f.outflow).map(function(x){return Math.abs(x.d);}))||1,nm=function(L){return L.slice(0,3).map(function(r){return esc(r.ind);}).join('<br>');};
  return'<div class="intro">以各產業「今日成交值占全市場比重」對比「近 5 日平均占比」，增加＝資金流入、減少＝資金流出（pp＝百分點）。僅含上市櫃個股，不含 ETF。</div>'+
- '<div class="hint"><b>💧 '+esc(f.headline)+'</b></div><div class="flw"><div class="fo">流出<br>'+nm(f.outflow)+'</div><div class="ar">➜</div><div class="fi">流入<br>'+nm(f.inflow)+'</div></div>'+
+ '<div class="hint"><b>💧 '+esc(f.headline||'')+'</b></div><div class="flw"><div class="fo">流出<br>'+nm(f.outflow)+'</div><div class="ar">➜</div><div class="fi">流入<br>'+nm(f.inflow)+'</div></div>'+
  '<div class="intro"><b>🔺 資金流入族群</b></div>'+f.inflow.map(function(r){return flowRow(r,mx);}).join('')+'<div class="intro"><b>🔻 資金流出族群</b></div>'+f.outflow.map(function(r){return flowRow(r,mx);}).join('')+
- '<div class="fcard"><details><summary>全部族群排行（占比變化）</summary><ul style="margin-top:8px">'+f.rows.map(function(r){return'<li style="padding-left:0">'+esc(r.ind)+'　<span class="'+cl(r.d)+'">'+(r.d>=0?'+':'')+r.d.toFixed(2)+' pp</span>　'+cpc(r.pct)+'</li>';}).join('').replace(/<li style="padding-left:0">/g,'<li style="padding-left:0;list-style:none">')+'</ul></details></div>';}
+ '<div class="fcard"><details><summary>全部族群排行（占比變化）</summary><ul style="margin-top:8px">'+f.rows.map(function(r){return'<li style="padding-left:0">'+esc(r.ind)+'　<span class="'+cl(r.d)+'">'+(r.d>=0?'+':'')+f2(r.d)+' pp</span>　'+cpc(r.pct)+'</li>';}).join('').replace(/<li style="padding-left:0">/g,'<li style="padding-left:0;list-style:none">')+'</ul></details></div>';}
 
 /* ---------- 台股查詢 ---------- */
 function vTW(){return qbanner()+'<div class="sbox"><input id="q" type="search" placeholder="🔍 輸入代號或名稱（含 ETF），如 2330、0050、台積電" value="'+esc(ST.q)+'"></div>'+chips(['全部','個股','ETF','有訊號'],ST.flt,'flt')+'<div id="rl"></div>';}
@@ -135,7 +145,7 @@ function drawTW(){load('S').then(function(){var S=DATA.S,el=$('rl');if(!el)retur
 /* ---------- 美股 ---------- */
 var IXS=['^DJI','^GSPC','^SOX','^IXIC','^KS11','^N225'];
 function vUS(){var m=DATA.M,h=qbanner();
- if(m&&m.items.length){h+='<div class="intro" style="margin-bottom:0">點指數卡片：看它追蹤什麼、走勢圖與技術面解讀</div><div class="strip">'+IXS.map(mkItem).filter(Boolean).map(function(x){return'<div class="mc" data-a="open" data-k="ix:'+esc(x.sym)+'"><small>'+x.e+' '+esc(x.name)+' ⓘ</small><b>'+x.c.toLocaleString()+'</b><span class="'+cl(x.p)+'" style="font-size:12px;font-weight:600">'+chgTxt(x.p,x.ch,x.c>1000?0:2)+'</span>'+spark(x.sp,x.p>=0)+'</div>';}).join('')+'</div>';
+ if(m&&m.items.length){h+='<div class="intro" style="margin-bottom:0">點指數卡片：看它追蹤什麼、走勢圖與技術面解讀</div><div class="strip">'+IXS.map(mkItem).filter(Boolean).map(function(x){return'<div class="mc" data-a="open" data-k="ix:'+esc(x.sym)+'"><small>'+x.e+' '+esc(x.name)+' ⓘ</small><b>'+ln(x.c)+'</b><span class="'+cl(x.p)+'" style="font-size:12px;font-weight:600">'+chgTxt(x.p,x.ch,x.c>1000?0:2)+'</span>'+spark(x.sp,x.p>=0)+'</div>';}).join('')+'</div>';
  if(m.hint&&m.hint.length)h+='<div class="hint">'+esc(m.hint[0])+'</div>';}
  var ev=evList().filter(function(e){return e.mk!='tw'&&e.days<=14;}).slice(0,3);
  if(ev.length)h+='<div class="hint" data-a="sub" data-v="cal" style="border-left-color:#7e57c2">🗓 <b>美股近期事件</b><br>'+ev.map(function(e){return'• '+e.md+' '+esc(e.title)+'　<span class="s2">'+whenTxt(e.days)+'</span>';}).join('<br>')+'</div>';
@@ -228,8 +238,8 @@ function showTW(code){var S=DATA.S,x=S&&S.s[code];if(!x){sheet('找不到','tw:'
  chartBox()+signal(x)+'<div class="box2"><h3>個股資訊</h3>'+info([['52週高／低',f2(x.h)+' / '+f2(x.l)],['距52週高',x.h?sg((price/x.h-1)*100):'—'],['近5日',sg(x.g5)],['近20日',sg(x.g20)],['成交量',x.q!=null?lots(x.q)+' 張':'—'],['成交值',x.tn!=null?f2(x.tn)+' 億':'—'],['本益比',x.e?'—':f2(x.pe,1)],['殖利率',x.y!=null?f2(x.y)+'%':'—'],['股價淨值比',x.e?'—':f2(x.pb)],['RSI(14)',f2(x.r,1)],['量比',x.v!=null?x.v+'x':'—'],['月線／季線',f2(x.a)+' / '+f2(x.z)]])+
  '<div class="lk" style="margin-top:12px"><a href="https://tw.stock.yahoo.com/quote/'+code+(x.x=='上櫃'?'.TWO':'.TW')+'" target="_blank" rel="noopener">Yahoo 股市</a><a href="https://goodinfo.tw/tw/StockDetail.asp?STOCK_ID='+code+'" target="_blank" rel="noopener">Goodinfo</a></div></div><div class="s2" style="margin-top:12px;line-height:1.6">以上為技術面整理，不構成投資建議；技術指標以最近一次收盤分析為準。本益比等官方資料若欄位缺漏會顯示「—」。</div>');}
 function erBox(u){var e=u.er;if(!e||(!e.next&&!e.last))return'';var h='<div class="box2"><h3>財報／法說</h3>';
- if(e.next)h+='<div class="es" style="margin:0">下次公布約 <b>'+e.next.slice(5).replace('-','/')+'</b>（日期為估計，以公司公告為準）</div>';
- if(e.last){var r=e.last;h+='<div class="fm" style="font-size:13px;margin-top:8px">最近一次 '+r.d.slice(5).replace('-','/')+'：EPS 實際 <b>'+f2(r.act)+'</b> vs 預期 '+f2(r.est)+'（驚喜 '+(r.sur==null?'—':(r.sur>=0?'+':'')+r.sur+'%')+'）・兩日反應 '+(r.rx==null?'—':cpc(r.rx))+'</div>'+(r.note?'<div class="imp"><b>📊 解讀</b>'+esc(r.note)+(r.tw?'<br>台灣相關：'+esc(r.tw):'')+'</div>':'');}
+ if(e.next)h+='<div class="es" style="margin:0">下次公布約 <b>'+String(e.next).slice(5).replace('-','/')+'</b>（日期為估計，以公司公告為準）</div>';
+ if(e.last){var r=e.last;h+='<div class="fm" style="font-size:13px;margin-top:8px">最近一次 '+String(r.d||'').slice(5).replace('-','/')+'：EPS 實際 <b>'+f2(r.act)+'</b> vs 預期 '+f2(r.est)+'（驚喜 '+(r.sur==null?'—':(r.sur>=0?'+':'')+r.sur+'%')+'）・兩日反應 '+(r.rx==null?'—':cpc(r.rx))+'</div>'+(r.note?'<div class="imp"><b>📊 解讀</b>'+esc(r.note)+(r.tw?'<br>台灣相關：'+esc(r.tw):'')+'</div>':'');}
  return h+'</div>';}
 function showUS(sym){var U=DATA.U,u=U&&U.items.filter(function(y){return y.sym==sym;})[0];if(!u){sheet('找不到','us:'+sym,empty('找不到這檔標的'));return;}
  var q=qus(sym),p=q?q[1]:(u.p||0),price=q?q[0]:u.c;
@@ -239,7 +249,7 @@ function showUS(sym){var U=DATA.U,u=U&&U.items.filter(function(y){return y.sym==
  '<div class="lk" style="margin-top:12px"><a href="https://finance.yahoo.com/quote/'+encodeURIComponent(sym)+'" target="_blank" rel="noopener">Yahoo Finance</a></div></div><div class="s2" style="margin-top:12px;line-height:1.6">技術指標以最近一次收盤分析為準；以上為技術面整理，不構成投資建議。</div>');}
 function showIX(sym){var M=DATA.M,x=mkItem(sym);if(!x){sheet('找不到',null,empty('找不到這個指標'));return;}
  ST.cur={c:x.hist,d:x.dates||M.dates,lv:[]};var y=sym=='^TNX';
- sheet(x.name,null,'<div><span class="big '+cl(x.p)+'">'+x.c.toLocaleString()+'</span><span class="bp '+cl(x.p)+'">'+chgTxt(x.p,x.ch,x.c>1000?0:y?3:2)+'</span></div><div class="s2">'+esc(x.sym)+'・資料日 '+esc(x.d)+(qix(sym)?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
+ sheet(x.name,null,'<div><span class="big '+cl(x.p)+'">'+ln(x.c)+'</span><span class="bp '+cl(x.p)+'">'+chgTxt(x.p,x.ch,x.c>1000?0:y?3:2)+'</span></div><div class="s2">'+esc(x.sym)+'・資料日 '+esc(x.d)+(qix(sym)?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
  '<div class="box2"><h3>📖 這是在追蹤什麼？</h3><div class="es" style="margin-top:0">'+esc(x.about)+'</div><h3 style="margin-top:12px">🔍 怎麼看</h3><div class="es" style="margin-top:0">'+esc(x.watch)+'</div><h3 style="margin-top:12px">🇹🇼 與台股的關係</h3><div class="es" style="margin-top:0">'+esc(x.tw)+'</div></div>'+
  chartBox()+signal(x)+'<div class="box2"><h3>統計</h3>'+info([['52週高／低',f2(x.h)+' / '+f2(x.l)],['距52週高',x.h?sg((x.c/x.h-1)*100):'—'],['近5日',sg(x.g5)],['近20日',sg(x.g20)],['RSI(14)',f2(x.r,1)],['月線／季線',f2(x.a)+' / '+f2(x.z)]])+'</div><div class="s2" style="margin-top:12px;line-height:1.6">指數技術解讀以價格與均線、MACD、RSI 計算（不含成交量檢查），僅供參考，不構成投資建議。</div>');}
 /* ---------- 主流程 ---------- */
@@ -303,10 +313,11 @@ function refreshLive(){
 function inHours(){var d=new Date(Date.now()+8*3600000),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return w>=1&&w<=5&&m>=535&&m<=820;}
 function pollLive(){if(document.hidden||!inHours())return;loadL().then(refreshLive);}
 window.addEventListener('error',function(e){showErr(e.error||e.message);});
+window.addEventListener('unhandledrejection',function(e){showErr(e.reason||'未知錯誤');});
 restore();render();
 Promise.all([load('D'),load('M'),load('V'),loadQ()]).then(function(){var d=DATA.D;$('meta').textContent=d?'資料日 '+d.date+'　更新 '+d.updated:'尚無資料'+(DATA._e&&DATA._e.D?'（data.json '+DATA._e.D+'）':'，請先到 Actions 手動執行一次');
  var items=['^SOX','^IXIC','^DJI'].map(function(s){return mkItem(s);}).filter(Boolean);
- if(items.length)$('mk').textContent='🌎 '+items.map(function(x){return({'^SOX':'費半','^IXIC':'那指','^DJI':'道瓊'})[x.sym]+' '+(x.p>=0?'+':'')+x.p.toFixed(2)+'%';}).join('　');
+ if(items.length)$('mk').textContent='🌎 '+items.map(function(x){return({'^SOX':'費半','^IXIC':'那指','^DJI':'道瓊'})[x.sym]+' '+(x.p>=0?'+':'')+f2(x.p)+'%';}).join('　');
  render();pollLive();});
 setInterval(pollLive,20000);
 presBeat();setInterval(presBeat,60000);document.addEventListener('visibilitychange',function(){if(!document.hidden){presBeat();pollLive();}});
