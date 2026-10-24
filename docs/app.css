@@ -91,3 +91,42 @@ svg text{font-family:inherit}
 .mc[data-a]{cursor:pointer}
 
 .dim{opacity:.55}
+
+/*SPLASH-START*/
+#splash{position:fixed;inset:0;z-index:200;background:#05060f;color:#9ff8ff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden;animation:spFail .4s 7s forwards}
+@keyframes spFail{to{opacity:0;visibility:hidden}}
+#splash .sp-sun{position:absolute;left:50%;top:44%;width:62vmin;height:62vmin;max-width:300px;max-height:300px;margin:-31vmin 0 0 -31vmin;border-radius:50%;background:linear-gradient(#f9f002,#ff2a6d 60%,#7b2ff7);-webkit-mask-image:linear-gradient(#000 0 52%,transparent 52% 56%,#000 56% 67%,transparent 67% 72%,#000 72% 81%,transparent 81% 87%,#000 87% 93%,transparent 93% 97%,#000 97%);mask-image:linear-gradient(#000 0 52%,transparent 52% 56%,#000 56% 67%,transparent 67% 72%,#000 72% 81%,transparent 81% 87%,#000 87% 93%,transparent 93% 97%,#000 97%);opacity:.9;filter:drop-shadow(0 0 24px #ff2a6d)}
+#splash .sp-grid{position:absolute;left:-60%;right:-60%;top:44%;bottom:-30%;background-image:linear-gradient(rgba(0,240,255,.7) 1px,transparent 1px),linear-gradient(90deg,rgba(255,42,109,.6) 1px,transparent 1px);background-size:44px 44px;transform:perspective(340px) rotateX(64deg);transform-origin:50% 0;animation:spGrid 1s linear infinite;-webkit-mask-image:linear-gradient(transparent,#000 35%);mask-image:linear-gradient(transparent,#000 35%)}
+@keyframes spGrid{to{background-position:0 44px,0 0}}
+#splash .sp-scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.3) 3px);pointer-events:none}
+#splash .sp-scan::after{content:"";position:absolute;left:0;right:0;height:22%;background:linear-gradient(transparent,rgba(0,240,255,.12),transparent);animation:spSweep 2.6s linear infinite}
+@keyframes spSweep{from{top:-25%}to{top:105%}}
+#splash .sp-vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(0,0,0,.85));pointer-events:none}
+#splash .sp-core{position:absolute;left:0;right:0;top:11%;padding:0 22px;text-align:center}
+#splash .sp-logo{width:92px;height:70px;filter:drop-shadow(0 0 6px #00f0ff)}
+#splash .sp-logo *{stroke-dasharray:90;stroke-dashoffset:90;animation:spDraw .9s ease-out forwards}
+#splash .sp-logo *:nth-child(2){animation-delay:.2s}#splash .sp-logo *:nth-child(3){animation-delay:.4s}#splash .sp-logo *:nth-child(4){animation-delay:.6s}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+#splash .sp-title{position:relative;margin:10px 0 4px;font:900 36px/1.2 system-ui,"Noto Sans TC",sans-serif;letter-spacing:3px;color:#fff;text-shadow:0 0 8px #00f0ff,0 0 24px #7b2ff7}
+#splash .sp-title::before,#splash .sp-title::after{content:attr(data-t);position:absolute;left:0;right:0;top:0;overflow:hidden}
+#splash .sp-title::before{color:#ff2a6d;text-shadow:none;transform:translateX(-3px);animation:spG1 2.2s steps(1) infinite}
+#splash .sp-title::after{color:#00f0ff;text-shadow:none;transform:translateX(3px);animation:spG2 2.2s steps(1) infinite}
+@keyframes spG1{0%,100%{clip-path:inset(0 0 100% 0)}10%{clip-path:inset(10% 0 60% 0)}14%{clip-path:inset(0 0 100% 0)}40%{clip-path:inset(55% 0 20% 0)}44%{clip-path:inset(0 0 100% 0)}72%{clip-path:inset(30% 0 45% 0)}76%{clip-path:inset(0 0 100% 0)}}
+@keyframes spG2{0%,100%{clip-path:inset(100% 0 0 0)}20%{clip-path:inset(60% 0 15% 0)}24%{clip-path:inset(100% 0 0 0)}52%{clip-path:inset(15% 0 70% 0)}56%{clip-path:inset(100% 0 0 0)}84%{clip-path:inset(45% 0 35% 0)}88%{clip-path:inset(100% 0 0 0)}}
+#splash .sp-sub{font-size:11px;letter-spacing:2px;color:#ff7bd0;text-shadow:0 0 8px #ff2a6d}
+#splash .sp-log{margin:22px auto 0;max-width:330px;text-align:left;font-size:12.5px;line-height:2}
+#splash .sp-log div{opacity:0;animation:spIn .01s forwards;white-space:nowrap}
+#splash .sp-log div:nth-child(1){animation-delay:.4s}#splash .sp-log div:nth-child(2){animation-delay:.8s}#splash .sp-log div:nth-child(3){animation-delay:1.2s}
+@keyframes spIn{to{opacity:1}}
+#splash .sp-log b{float:right;font-weight:400;color:#f9f002;animation:spBlink .7s steps(1) infinite}
+#splash .sp-log b.ok{color:#39ff14;text-shadow:0 0 8px #39ff14;animation:none}
+#splash .sp-log b.bad{color:#ff2a6d;text-shadow:0 0 8px #ff2a6d;animation:none}
+@keyframes spBlink{50%{opacity:.25}}
+#splash .sp-bar{margin:16px auto 0;max-width:330px;height:6px;border:1px solid rgba(0,240,255,.5);border-radius:3px;overflow:hidden}
+#splash .sp-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00f0ff,#ff2a6d);box-shadow:0 0 12px #00f0ff;transition:width .35s}
+#splash .sp-tip{margin-top:14px;font-size:10px;letter-spacing:3px;color:rgba(159,248,255,.5);animation:spBlink 1.4s steps(1) infinite}
+#splash .sp-foot{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;font:11px system-ui,sans-serif;color:rgba(255,255,255,.45)}
+#splash.out{animation:spOut .6s forwards}
+@keyframes spOut{0%{filter:none}25%{transform:translateX(5px) skewX(3deg);filter:hue-rotate(60deg) saturate(2)}50%{transform:translateX(-4px);opacity:1}100%{opacity:0;transform:scale(1.12);visibility:hidden}}
+@media(prefers-reduced-motion:reduce){#splash{display:none}}
+/*SPLASH-END*/

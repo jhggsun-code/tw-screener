@@ -283,6 +283,7 @@ function act(a,d){
  else if(a=='rng'){ST.rng=+d.v;[].forEach.call(document.querySelectorAll('.rng .cp'),function(b){b.className='cp'+(+b.dataset.v==ST.rng?' on':'');});drawChart();}
  else if(a=='tog'){var w=wl(),i=w.indexOf(d.k);if(i<0)w.push(d.k);else w.splice(i,1);setwl(w);[].forEach.call(document.querySelectorAll('[data-a="tog"]'),function(b){if(b.dataset.k==d.k)b.textContent=has(d.k)?'★ 已自選':'☆ 加自選';});if(ST.tab=='my'&&!ST.open)drawMy();}
  else if(a=='reload'){location.reload();}
+ else if(a=='spt'){var off=false;try{off=localStorage.getItem('nosplash')==='1';localStorage.setItem('nosplash',off?'0':'1');}catch(e){}spLabel();}
  else if(a=='dis'){$('dis').style.display='flex';}
  else if(a=='ok'){try{localStorage.setItem('ack1','1');}catch(e){}$('dis').style.display='none';}
  saveSt();
@@ -305,6 +306,15 @@ function staleHtml(){var d=DATA.D;if(!d)return'';var n=new Date(Date.now()+8*360
  if(w>=1&&w<=5&&m>=16*60&&d.date<td)return'<div class="stale">⚠️ 目前顯示 '+esc(d.date)+' 收盤資料，今日（'+td+'）收盤分析尚未完成。通常 14:30～18:00 會更新；若今日休市可忽略。</div>';
  if(w>=1&&w<=5&&m>=9*60&&m<14*60&&d.date<td)return'<div class="stale">🕘 盤中：個股訊號與榜單為 '+esc(d.date)+' 收盤資料，股價為準即時／延遲報價。</div>';return'';}
 function showErr(e){var el=$('toast');if(!el){return;}el.style.display='block';el.innerHTML='⚠️ 畫面發生錯誤（'+esc(e&&e.message||e)+'）　<a data-a="reload" style="color:#90caf9;text-decoration:underline">重新載入</a>';}
+/*SPLASH-JS-START*/
+var SP={t0:Date.now(),n:0,done:false};
+function spClose(){if(SP.done)return;SP.done=true;var e=$('splash');if(!e)return;e.className='out';try{sessionStorage.setItem('sp1','1');}catch(x){}setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},650);}
+function spStep(k,ok){var b=$('sp_'+k);if(!b||b.dataset.d)return;b.dataset.d='1';b.className=ok?'ok':'bad';b.textContent=ok?'[ OK ]':'[FAIL]';SP.n++;var r=$('spBar');if(r)r.style.width=Math.round(SP.n/3*100)+'%';}
+function spFinish(){setTimeout(spClose,Math.max(0,1900-(Date.now()-SP.t0)));}
+function spInit(){var e=$('splash');if(!e)return;var skip=false;try{skip=localStorage.getItem('nosplash')==='1'||sessionStorage.getItem('sp1')==='1'||(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches);}catch(x){}
+ if(skip){SP.done=true;if(e.parentNode)e.parentNode.removeChild(e);return;}e.addEventListener('click',spClose);setTimeout(spClose,4500);}
+function spLabel(){var t=$('spt');if(!t)return;var off=false;try{off=localStorage.getItem('nosplash')==='1';}catch(x){}t.textContent=off?'開啟啟動動畫':'關閉啟動動畫';}
+/*SPLASH-JS-END*/
 function refreshLive(){
  var b=$('qbn');if(b)b.innerHTML=qbInner();
  var w=$('twii');if(w)w.innerHTML=twiiHtml();
@@ -314,8 +324,10 @@ function inHours(){var d=new Date(Date.now()+8*3600000),w=d.getUTCDay(),m=d.getU
 function pollLive(){if(document.hidden||!inHours())return;loadL().then(refreshLive);}
 window.addEventListener('error',function(e){showErr(e.error||e.message);});
 window.addEventListener('unhandledrejection',function(e){showErr(e.reason||'未知錯誤');});
+spInit();spLabel();
 restore();render();
-Promise.all([load('D'),load('M'),load('V'),loadQ()]).then(function(){var d=DATA.D;$('meta').textContent=d?'資料日 '+d.date+'　更新 '+d.updated:'尚無資料'+(DATA._e&&DATA._e.D?'（data.json '+DATA._e.D+'）':'，請先到 Actions 手動執行一次');
+['D','M','V'].forEach(function(k){load(k).then(function(d){spStep(k,!!d);});});
+Promise.all([load('D'),load('M'),load('V'),loadQ()]).then(function(){spFinish();var d=DATA.D;$('meta').textContent=d?'資料日 '+d.date+'　更新 '+d.updated:'尚無資料'+(DATA._e&&DATA._e.D?'（data.json '+DATA._e.D+'）':'，請先到 Actions 手動執行一次');
  var items=['^SOX','^IXIC','^DJI'].map(function(s){return mkItem(s);}).filter(Boolean);
  if(items.length)$('mk').textContent='🌎 '+items.map(function(x){return({'^SOX':'費半','^IXIC':'那指','^DJI':'道瓊'})[x.sym]+' '+(x.p>=0?'+':'')+f2(x.p)+'%';}).join('　');
  render();pollLive();});
