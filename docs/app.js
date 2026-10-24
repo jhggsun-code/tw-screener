@@ -9,8 +9,9 @@ var INTRO={pick:'',dip:'自半年高點大跌逾 30%、RSI 曾超賣且開始回
 var SUBS=[['pick','🎯 精選5檔'],['flow','💧 資金流向'],['dip','🛟 超跌'],['gain','🔥 漲幅'],['act','💰 成交值']];
 function $(i){return document.getElementById(i);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function J(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();});}
-function load(){var a=[].slice.call(arguments);return Promise.all(a.map(function(n){if(DATA[n]!==undefined)return DATA[n];return J(URLS[n]).then(function(d){DATA[n]=d;return d;}).catch(function(){DATA[n]=null;return null;});}));}
+function J(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text?r.text():r.json();}).then(function(t){if(typeof t!='string')return t;
+ try{return JSON.parse(t);}catch(e){try{return JSON.parse(t.replace(/(:|\[|,)\s*-?(NaN|Infinity)(?=\s*[,\]}])/g,'$1null'));}catch(e2){throw new Error('資料格式錯誤');}}});}
+function load(){var a=[].slice.call(arguments);return Promise.all(a.map(function(n){if(DATA[n]!==undefined)return DATA[n];return J(URLS[n]).then(function(d){DATA[n]=d;return d;}).catch(function(e){DATA[n]=null;(DATA._e=DATA._e||{})[n]=String(e&&e.message||e);return null;});}));}
 function loadQ(){var h=location.hostname,p=(location.pathname.split('/')[1]||'');if(!/github\.io$/.test(h)||!p){DATA.Q=null;return Promise.resolve();}
  return fetch('https://raw.githubusercontent.com/'+h.split('.')[0]+'/'+p+'/quotes/quotes.json?t='+Math.floor(Date.now()/60000)).then(function(r){return r.json();}).then(function(q){DATA.Q=q;}).catch(function(){DATA.Q=null;});}
 function wl(){try{return JSON.parse(localStorage.getItem('wl')||'[]').map(function(k){return k.indexOf(':')<0?'tw:'+k:k;});}catch(e){return[];}}
@@ -61,7 +62,7 @@ function whenTxt(n){return n<0?'已過':n==0?'今天':n==1?'明天':'還有 '+n+
 function twiiHtml(){var tw=mkItem('^TWII');return'📈 台股加權 <b>'+(tw?tw.c.toLocaleString():'—')+'</b> '+(tw?'<span class="'+cl(tw.p)+'">'+chgTxt(tw.p,tw.ch,2)+'</span>':'');}
 function backChip(){return'<div class="cps"><button class="cp" data-a="sub" data-v="pick">← 返回今日</button></div>';}
 function vHome(){
- var d=DATA.D;if(!d)return empty('尚無資料<br>請先到 GitHub 的 Actions 手動執行一次');
+ var d=DATA.D;if(!d)return empty('尚無資料'+(DATA._e&&DATA._e.D?'<br>原因：data.json '+esc(DATA._e.D):'')+'<br>請先到 GitHub 的 Actions 手動執行一次，或見 SOP「畫面顯示尚無資料」');
  if(['pick','flow','dip','gain','act','cal','cyc'].indexOf(ST.sub)<0)ST.sub='pick';
  var m=DATA.M,f=d.flow,b=d.breadth,h=qbanner();
  if(ST.sub=='cal')return h+backChip()+vCal();
@@ -303,7 +304,7 @@ function inHours(){var d=new Date(Date.now()+8*3600000),w=d.getUTCDay(),m=d.getU
 function pollLive(){if(document.hidden||!inHours())return;loadL().then(refreshLive);}
 window.addEventListener('error',function(e){showErr(e.error||e.message);});
 restore();render();
-Promise.all([load('D'),load('M'),load('V'),loadQ()]).then(function(){var d=DATA.D;$('meta').textContent=d?'資料日 '+d.date+'　更新 '+d.updated:'尚無資料，請先到 Actions 手動執行一次';
+Promise.all([load('D'),load('M'),load('V'),loadQ()]).then(function(){var d=DATA.D;$('meta').textContent=d?'資料日 '+d.date+'　更新 '+d.updated:'尚無資料'+(DATA._e&&DATA._e.D?'（data.json '+DATA._e.D+'）':'，請先到 Actions 手動執行一次');
  var items=['^SOX','^IXIC','^DJI'].map(function(s){return mkItem(s);}).filter(Boolean);
  if(items.length)$('mk').textContent='🌎 '+items.map(function(x){return({'^SOX':'費半','^IXIC':'那指','^DJI':'道瓊'})[x.sym]+' '+(x.p>=0?'+':'')+x.p.toFixed(2)+'%';}).join('　');
  render();pollLive();});
