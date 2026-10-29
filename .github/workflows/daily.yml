@@ -22,7 +22,7 @@ jobs:
       - name: 檢查檔案是否齊全
         run: |
           ls -la
-          for f in screener.py extras.py us.py cal.py events.py twse.py page.html app.css app.js; do
+          for f in screener.py extras.py us.py cal.py events.py twse.py chips.py health.py alerts.py page.html app.css app.js; do
             if [ ! -f "$f" ]; then
               echo "::error::找不到 $f，請確認 update.zip 已上傳到專案最外層，且檔名完全一致"
               exit 1
@@ -47,3 +47,9 @@ jobs:
           git checkout -- .
           git pull --rebase
           git push
+      - name: 失敗通知
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then curl -s -H "Content-Type: application/json" -d '{"content":"🚨 台股選股 App：daily-screener 執行失敗，請到 GitHub Actions 查看日誌"}' "$DISCORD_WEBHOOK_URL" > /dev/null; fi
