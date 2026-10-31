@@ -55,7 +55,9 @@ function qus(s){var Q=DATA.Q;return(Q&&Q.us&&Q.us[s])||null;}
 function qix(s){var L=DATA.L;if(liveOk()&&L.ix&&L.ix[s])return L.ix[s];var Q=DATA.Q;return(Q&&Q.ix&&Q.ix[s])||null;}
 function mkItem(s){var m=DATA.M,x=m&&m.items.filter(function(y){return y.sym==s;})[0];if(!x)return null;var q=qix(s);if(!q)return x;var o={};for(var k in x)o[k]=x[k];o.c=q[0];o.p=q[1];o.ch=q[2];return o;}
 function qbInner(){var Q=DATA.Q;if(liveOk())return'<div class="qb"><span class="live"></span>⚡ 即時報價 '+esc(DATA.L.upd)+'（'+(DATA.L.src=='yahoo'?'Yahoo，可能延遲':'證交所基本市況報導')+'，約每 30 秒更新）。技術訊號與榜單以最近一次收盤分析為準。</div>';
- return Q&&Q.upd?'<div class="qb"><span class="live"></span>報價更新 '+esc(Q.upd)+'（Yahoo 延遲約 15～20 分鐘）。技術訊號與榜單以最近一次收盤分析為準。</div>':'';}
+ if(!(Q&&Q.upd))return'';
+ if(!inHours())return'<div class="qb">✅ 目前為收盤後，顯示最近一個交易日的<b>收盤價</b>（證交所／櫃買官方資料）。更新 '+esc(Q.upd)+'。技術訊號與榜單以收盤分析為準。</div>';
+ return'<div class="qb"><span class="live"></span>報價更新 '+esc(Q.upd)+'（Yahoo 延遲約 15～20 分鐘；加權指數與自選股請啟用 live.yml 取得約 30 秒更新）。技術訊號與榜單以最近一次收盤分析為準。</div>';}
 function qbanner(){return'<div id="qbn">'+qbInner()+'</div>';}
 function spark(a,up){if(!a||a.length<2)return'';var mn=Math.min.apply(null,a),mx=Math.max.apply(null,a),pts=a.map(function(v,i){return(i*100/(a.length-1)).toFixed(1)+','+(28-(v-mn)/((mx-mn)||1)*28).toFixed(1);}).join(' ');return'<svg class="sp" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline fill="none" stroke="'+(up?'#d9434b':'#2a9d62')+'" stroke-width="2" points="'+pts+'"/></svg>';}
 function row(o){var g=TAGS[o.t]||TAGS.none;return'<div class="row" data-a="open" data-k="'+esc(o.k)+'" data-code="'+esc(o.code)+'" style="--c:'+g.c+'"><div class="rl"><div class="rn">'+esc(o.n)+'<span class="cd">'+esc(o.code)+(o.e?' · ETF':'')+'</span></div>'+(o.nopill?'':'<span class="pill">'+g.e+' '+g.t+'</span>')+''+(o.sub?'<div class="rsub">'+esc(o.sub)+'</div>':'')+'</div><div class="rr">'+(o.sp||'')+'<div class="px '+cl(o.p)+'">'+f2(o.c)+'</div><div class="pc '+cl(o.p)+'">'+chgTxt(o.p,o.cg)+'</div></div></div>';}
@@ -76,7 +78,7 @@ function vHl(){var K=DATA.K;if(K===undefined){load('K').then(function(){if(ST.su
  var ic={ok:'✅',warn:'⚠️',bad:'❌'},Q=DATA.Q,L=DATA.L;
  return'<div class="intro"><b>🩺 資料狀態</b>　'+esc(K.gen||'')+' 完整分析時檢查。❌ 代表該來源失敗（也會推播到 Discord／Telegram），⚠️ 代表資料不完整但不影響使用。</div>'+
  K.items.map(function(x){return'<div class="fcard"><div class="fh"><span>'+(ic[x.s]||'•')+' '+esc(x.n)+'</span></div><div class="fm">'+esc(x.d)+'</div></div>';}).join('')+
- '<div class="fcard"><div class="fh"><span>⚡ 即時報價</span></div><div class="fm">個股報價（Yahoo／官方收盤）：'+(Q&&Q.upd?esc(Q.upd):'尚無')+'<br>即時加權指數：'+(liveOk()?esc(L.upd)+'（'+(L.src=='yahoo'?'Yahoo':'證交所')+'）':'未啟用或已過期（盤中才會更新）')+'</div></div>';}
+ '<div class="fcard"><div class="fh"><span>⚡ 即時報價</span></div><div class="fm">個股報價（Yahoo／官方收盤）：'+(Q&&Q.upd?esc(Q.upd):'尚無')+'<br>即時加權指數：'+(liveOk()?esc(L.upd)+'（'+(L.src=='yahoo'?'Yahoo':'證交所')+'）':'未啟用或已過期（盤中才會更新）')+'</div></div>'+useHtml();}
 function vChip(){var C=DATA.C;if(C===undefined){load('C').then(function(){if(ST.sub=='chip'&&ST.tab=='home')render();});return empty('載入中…');}
  if(!C||!C.date)return empty('尚無法人資料<br>可能今日尚未公布，或證交所介面改版');
  var m=C.mkt,h='<div class="intro"><b>🏦 三大法人買賣超</b>　資料日 '+esc(C.date)+'。外資＝外資及陸資；個股單位為張，全市場為億元；僅含上市個股。</div>';
@@ -303,7 +305,12 @@ function render(){
 } catch(e){showErr(e);}
  ani();
 }
-function act(a,d){
+var FEAT={'tab:home':'今日','tab:tw':'台股','tab:us':'美股','tab:news':'新聞','tab:my':'自選','sub:pick':'精選 5 檔','sub:flow':'資金流向','sub:dip':'超跌','sub:gain':'漲幅榜','sub:act':'成交值榜','sub:cal':'本週重點','sub:cyc':'景氣循環','sub:bt':'訊號回測','sub:chip':'三大法人','sub:hl':'資料狀態','open:tw':'台股個股詳細頁','open:us':'美股個股詳細頁','open:ix':'指數詳細頁','nsub:en':'國際英文新聞','mask':'學習模式','speak':'英文朗讀','cpw':'複製自選清單'};
+function useGet(){try{return JSON.parse(localStorage.getItem('use')||'{}');}catch(e){return{};}}
+function useCount(a,d){var k=(a=='tab'||a=='sub'||a=='nsub')?a+':'+d.v:a=='open'?'open:'+String(d.k||'').split(':')[0]:a;if(!FEAT[k])return;try{var u=useGet();u[k]=(u[k]||0)+1;u._t=u._t||Date.now();localStorage.setItem('use',JSON.stringify(u));}catch(e){}}
+function useHtml(){var u=useGet(),days=u._t?Math.max(1,Math.round((Date.now()-u._t)/864e5)):0,keys=Object.keys(FEAT).sort(function(x,y){return(u[y]||0)-(u[x]||0);});
+ return'<div class="fcard"><div class="fh"><span>📈 功能使用統計</span><small>只存在你的手機'+(days?'・統計 '+days+' 天':'')+'</small></div><div class="fm">用一兩週後看看哪些功能從沒用過，再決定要不要刪掉，讓畫面更簡單。<br>'+keys.map(function(k){var n=u[k]||0;return(n?'• ':'<span style="opacity:.55">○ ')+FEAT[k]+'：'+(n?n+' 次':'尚未使用')+(n?'':'</span>');}).join('<br>')+'</div></div>';}
+function act(a,d){useCount(a,d);
  if(a=='tab'){ST.tab=d.v;if(ST.open)history.back();ST.q='';window.scrollTo(0,0);render();}
  else if(a=='sub'){ST.tab='home';ST.sub=d.v;window.scrollTo(0,0);render();}
  else if(a=='flt'){ST.flt=d.v;render();}
