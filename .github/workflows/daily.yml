@@ -39,6 +39,20 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: 訊號回測（缺檔或超過 6 天才重算，失敗不影響主流程）
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json, datetime as dt, subprocess, sys
+          try:
+              u = json.load(open("docs/backtest.json", encoding="utf-8"))["updated"]
+              old = (dt.date.today() - dt.date.fromisoformat(u)).days > 6
+          except Exception:
+              old = True
+          if old:
+              sys.exit(subprocess.call(["python", "backtest.py"]))
+          print("回測資料仍新，略過")
+          PY
       - run: |
           git config user.name "bot"
           git config user.email "bot@users.noreply.github.com"
