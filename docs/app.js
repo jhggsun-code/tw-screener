@@ -73,7 +73,7 @@ function evList(){var V=DATA.V,L=[];if(!V)return L;(V.events||[]).forEach(functi
 function whenTxt(n){return n<0?'已過':n==0?'今天':n==1?'明天':'還有 '+n+' 天';}
 function ixTile(sym,label,extra){var x=mkItem(sym);return'<div class="tile" data-a="open" data-k="ix:'+sym+'"><small>'+label+' ⓘ</small><b>'+(x?ln(x.c):'—')+'</b>'+(x?'<span class="'+cl(x.p)+'">'+chgTxt(x.p,x.ch,2)+'</span>':'')+(extra||'')+'</div>';}
 function basisTxt(){var t=mkItem('TXF'),w=mkItem('^TWII');if(!t||!w||t.d!==w.d)return'';var b=t.c-w.c;return'<small style="margin-top:2px">'+(b>=0?'正價差 +':'逆價差 −')+Math.abs(b).toFixed(0)+' 點</small>';}
-function twiiTiles(){return ixTile('^TWII','加權指數')+(mkItem('TXF')?ixTile('TXF','台指期近月',basisTxt()):'');}
+function twiiTiles(){return ixTile('^TWII','加權指數')+(mkItem('TXF')?ixTile('TXF','台指期近月',basisTxt()):'<div class="tile" data-a="sub" data-v="hl" style="opacity:.75"><small>台指期近月</small><b>—</b><span class="s2">資料暫時取不到<br>點此看原因 ›</span></div>');}
 function twiiHtml(){var tw=mkItem('^TWII');return'📈 台股加權 <b>'+(tw?ln(tw.c):'—')+'</b> '+(tw?'<span class="'+cl(tw.p)+'">'+chgTxt(tw.p,tw.ch,2)+'</span>':'');}
 function backChip(){return'<div class="cps"><button class="cp" data-a="sub" data-v="pick">← 返回今日</button></div>';}
 function vHl(){var K=DATA.K;if(K===undefined){load('K').then(function(){if(ST.sub=='hl'&&ST.tab=='home')render();});return empty('載入中…');}
