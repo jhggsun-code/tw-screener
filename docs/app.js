@@ -52,8 +52,10 @@ function loadL(){var h=location.hostname,p=(location.pathname.split('/')[1]||'')
  return fetch('https://raw.githubusercontent.com/'+h.split('.')[0]+'/'+p+'/live/live.json?t='+Math.floor(Date.now()/15000)).then(function(r){return r.json();}).then(function(l){DATA.L=l;}).catch(function(){});}
 function qtw(c){var L=DATA.L;if(liveOk()&&L.tw&&L.tw[c])return L.tw[c];var Q=DATA.Q,D=DATA.D;return(Q&&Q.tw&&D&&Q.tw_d>=D.date&&Q.tw[c])||null;}
 function qus(s){var Q=DATA.Q;return(Q&&Q.us&&Q.us[s])||null;}
-function qix(s){var L=DATA.L;if(liveOk()&&L.ix&&L.ix[s])return L.ix[s];var Q=DATA.Q;return(Q&&Q.ix&&Q.ix[s])||null;}
-function mkItem(s){var m=DATA.M,x=m&&m.items.filter(function(y){return y.sym==s;})[0];if(!x)return null;var q=qix(s);if(!q)return x;var o={};for(var k in x)o[k]=x[k];o.c=q[0];o.p=q[1];o.ch=q[2];return o;}
+function txDay(){var Q=DATA.Q,t=Q&&Q.tx&&Q.tx.day&&Q.tx.ts?Q.tx:null;if(!t)return null;var age=Date.now()/1000-t.ts,d=new Date(t.ts*1000+8*3600000),n=tpe(),same=d.getUTCDate()==n.getUTCDate()&&d.getUTCMonth()==n.getUTCMonth(),m=d.getUTCHours()*60+d.getUTCMinutes();
+ return(age<1500||(same&&m>=825&&m<900))?t.day:null;}
+function qix(s){var L=DATA.L;if(liveOk()&&L.ix&&L.ix[s])return L.ix[s];var Q=DATA.Q;if(Q&&Q.ix&&Q.ix[s])return Q.ix[s];return s=='TXF'?txDay():null;}
+function mkItem(s){var m=DATA.M,x=m&&m.items.filter(function(y){return y.sym==s;})[0];if(!x)return null;var q=qix(s);if(!q)return x;var o={};for(var k in x)o[k]=x[k];o.c=q[0];o.p=q[1];o.ch=q[2];o.ov=1;return o;}
 function qbInner(){var Q=DATA.Q;if(liveOk())return'<div class="qb"><span class="live"></span>⚡ 即時報價 '+esc(DATA.L.upd)+'（'+(DATA.L.src=='yahoo'?'Yahoo，可能延遲':'證交所基本市況報導')+'，約每 30 秒更新）。技術訊號與榜單以最近一次收盤分析為準。</div>';
  if(!(Q&&Q.upd))return'';
  if(!inHours())return'<div class="qb">✅ 目前為收盤後，顯示最近一個交易日的<b>收盤價</b>（證交所／櫃買官方資料）。更新 '+esc(Q.upd)+'。技術訊號與榜單以收盤分析為準。</div>';
@@ -72,11 +74,13 @@ function evList(){var V=DATA.V,L=[];if(!V)return L;(V.events||[]).forEach(functi
  L.forEach(function(e){e.days=dleft(e.d);});return L.filter(function(e){return inWeek(e.days);}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0;});}
 function whenTxt(n){return n<0?'已過':n==0?'今天':n==1?'明天':'還有 '+n+' 天';}
 function ixTile(sym,label,extra){var x=mkItem(sym);return'<div class="tile" data-a="open" data-k="ix:'+sym+'"><small>'+label+' ⓘ</small><b>'+(x?ln(x.c):'—')+'</b>'+(x?'<span class="'+cl(x.p)+'">'+chgTxt(x.p,x.ch,2)+'</span>':'')+(extra||'')+'</div>';}
-function basisTxt(){var t=mkItem('TXF'),w=mkItem('^TWII');var b='';if(t&&w&&t.d===w.d){var x=t.c-w.c;b='<small style="margin-top:2px">'+(x>=0?'正價差 +':'逆價差 −')+Math.abs(x).toFixed(0)+' 點</small>';}return b+nightTxt();}
+function basisTxt(){var t=mkItem('TXF'),w=mkItem('^TWII');var b='';if(t&&w&&t.d===w.d){var x=t.c-w.c;
+ if(!!t.ov!==!!w.ov||Math.abs(x)>w.c*0.04)b='<small style="margin-top:2px;color:#f9a825">⚠️ 期貨為 '+esc(String(t.d).slice(5))+' 收盤、無盤中價，價差暫不計算</small>';
+ else b='<small style="margin-top:2px">'+(x>=0?'正價差 +':'逆價差 −')+Math.abs(x).toFixed(0)+' 點</small>';}return b+nightTxt();}
 function txNight(){var Q=DATA.Q,it=mkItem('TXF'),t=Q&&Q.tx&&Q.tx.night&&(Date.now()/1000-(Q.tx.ts||0)<36*3600)?Q.tx:(it&&it.night?{night:it.night,tm:it.night_tm}:null);
  if(!t)return null;var d=tpe(),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return(w==0||w==6||m>=825||m<525)?t:null;}
 function nightTxt(){var t=txNight(),n=t&&t.night;if(!n||n[0]==null)return'';return'<small style="margin-top:2px">🌙 夜盤 '+ln(n[0])+'　<span class="'+cl(n[1])+'">'+(n[1]>=0?'▲ ':'▼ ')+f2(Math.abs(n[2]),0)+'（'+f2(Math.abs(n[1]))+'%）</span>'+(t.tm?' · '+esc(t.tm):'')+'</small>';}
-function twiiTiles(){return ixTile('^TWII','加權指數')+(mkItem('TXF')?ixTile('TXF','台指期近月・日盤',basisTxt()):'<div class="tile" data-a="sub" data-v="hl" style="opacity:.75"><small>台指期近月</small><b>—</b><span class="s2">資料暫時取不到<br>點此看原因 ›</span></div>');}
+function twiiTiles(){return ixTile('^TWII','加權指數')+(mkItem('TXF')?ixTile('TXF',(function(){var t=mkItem('TXF');return'台指期近月・'+(t&&!t.ov&&inHours()?String(t.d).slice(5).replace('-','/')+' 收盤':'日盤');})(),basisTxt()):'<div class="tile" data-a="sub" data-v="hl" style="opacity:.75"><small>台指期近月</small><b>—</b><span class="s2">資料暫時取不到<br>點此看原因 ›</span></div>');}
 function twiiHtml(){var tw=mkItem('^TWII');return'📈 台股加權 <b>'+(tw?ln(tw.c):'—')+'</b> '+(tw?'<span class="'+cl(tw.p)+'">'+chgTxt(tw.p,tw.ch,2)+'</span>':'');}
 function backChip(){return'<div class="cps"><button class="cp" data-a="sub" data-v="pick">← 返回今日</button></div>';}
 function vHl(){var K=DATA.K;if(K===undefined){load('K').then(function(){if(ST.sub=='hl'&&ST.tab=='home')render();});return empty('載入中…');}
@@ -297,7 +301,7 @@ function showIX(sym){var M=DATA.M,x=mkItem(sym);if(!x){sheet('找不到',null,em
  ST.cur={c:x.hist,d:x.dates||M.dates,lv:[]};var y=sym=='^TNX';
  sheet(x.name,null,'<div><span class="big '+cl(x.p)+'">'+ln(x.c)+'</span><span class="bp '+cl(x.p)+'">'+chgTxt(x.p,x.ch,x.c>1000?0:y?3:2)+'</span></div><div class="s2">'+esc(x.sym)+'・資料日 '+esc(x.d)+(qix(sym)?'・報價 '+esc(DATA.Q.upd):'')+'</div>'+
  '<div class="box2"><h3>📖 這是在追蹤什麼？</h3><div class="es" style="margin-top:0">'+esc(x.about)+'</div><h3 style="margin-top:12px">🔍 怎麼看</h3><div class="es" style="margin-top:0">'+esc(x.watch)+'</div><h3 style="margin-top:12px">🇹🇼 與台股的關係</h3><div class="es" style="margin-top:0">'+esc(x.tw)+'</div></div>'+
- chartBox()+signal(x)+'<div class="box2"><h3>統計</h3>'+info([['52週高／低',f2(x.h)+' / '+f2(x.l)],['距52週高',x.h?sg((x.c/x.h-1)*100):'—'],['近5日',sg(x.g5)],['近20日',sg(x.g20)],['RSI(14)',f2(x.r,1)],['月線／季線',f2(x.a)+' / '+f2(x.z)]].concat(sym=='TXF'&&mkItem('^TWII')?[['與加權價差',(function(){var w=mkItem('^TWII'),b=x.c-w.c;return(b>=0?'正價差 +':'逆價差 −')+Math.abs(b).toFixed(0)+' 點';})()]]:[]).concat(sym=='TXF'&&txNight()?[['🌙 夜盤最新',(function(){var n=txNight();return ln(n.p)+(n.pct==null?'':'（'+(n.pct>=0?'+':'')+Number(n.pct).toFixed(2)+'%）')+(n.t?' '+n.t:'');})()]]:[]))+'</div><div class="s2" style="margin-top:12px;line-height:1.6">指數技術解讀以價格與均線、MACD、RSI 計算（不含成交量檢查），僅供參考，不構成投資建議。</div>');}
+ chartBox()+signal(x)+'<div class="box2"><h3>統計</h3>'+info([['52週高／低',f2(x.h)+' / '+f2(x.l)],['距52週高',x.h?sg((x.c/x.h-1)*100):'—'],['近5日',sg(x.g5)],['近20日',sg(x.g20)],['RSI(14)',f2(x.r,1)],['月線／季線',f2(x.a)+' / '+f2(x.z)]].concat(sym=='TXF'&&mkItem('^TWII')?[['與加權價差',(function(){var w=mkItem('^TWII'),b=x.c-w.c;if(!!x.ov!==!!w.ov||Math.abs(b)>w.c*0.04)return'期貨為前一日收盤，暫不計算';return(b>=0?'正價差 +':'逆價差 −')+Math.abs(b).toFixed(0)+' 點';})()]]:[]).concat(sym=='TXF'&&txNight()?[['🌙 夜盤最新',(function(){var n=txNight();return ln(n.p)+(n.pct==null?'':'（'+(n.pct>=0?'+':'')+Number(n.pct).toFixed(2)+'%）')+(n.t?' '+n.t:'');})()]]:[]))+'</div><div class="s2" style="margin-top:12px;line-height:1.6">指數技術解讀以價格與均線、MACD、RSI 計算（不含成交量檢查），僅供參考，不構成投資建議。</div>');}
 /* ---------- 主流程 ---------- */
 function countUp(){[].forEach.call(document.querySelectorAll('[data-n]'),function(e){var n=+e.dataset.n,t0=Date.now();if(!n||!window.requestAnimationFrame)return;(function f(){var r=Math.min(1,(Date.now()-t0)/700);e.textContent=Math.round(n*(1-Math.pow(1-r,3)));if(r<1)requestAnimationFrame(f);})();});}
 function render(){
