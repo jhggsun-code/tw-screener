@@ -77,9 +77,18 @@ function ixTile(sym,label,extra){var x=mkItem(sym);return'<div class="tile" data
 function basisTxt(){var t=mkItem('TXF'),w=mkItem('^TWII');var b='';if(t&&w&&t.d===w.d){var x=t.c-w.c;
  if(!!t.ov!==!!w.ov||Math.abs(x)>w.c*0.04)b='<small style="margin-top:2px;color:#f9a825">⚠️ 期貨為 '+esc(String(t.d).slice(5))+' 收盤、無盤中價，價差暫不計算</small>';
  else b='<small style="margin-top:2px">'+(x>=0?'正價差 +':'逆價差 −')+Math.abs(x).toFixed(0)+' 點</small>';}return b+nightTxt();}
-function txNight(){var Q=DATA.Q,it=mkItem('TXF'),t=Q&&Q.tx&&Q.tx.night&&(Date.now()/1000-(Q.tx.ts||0)<36*3600)?Q.tx:(it&&it.night?{night:it.night,tm:it.night_tm}:null);
- if(!t)return null;var d=tpe(),w=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return(w==0||w==6||m>=825||m<525)?t:null;}
-function nightTxt(){var t=txNight(),n=t&&t.night;if(!n||n[0]==null)return'';return'<small style="margin-top:2px">🌙 夜盤 '+ln(n[0])+'　<span class="'+cl(n[1])+'">'+(n[1]>=0?'▲ ':'▼ ')+f2(Math.abs(n[2]),0)+'（'+f2(Math.abs(n[1]))+'%）</span>'+(t.tm?' · '+esc(t.tm):'')+'</small>';}
+function txNight(){var Q=DATA.Q,it=mkItem('TXF');return Q&&Q.tx&&Q.tx.night&&(Date.now()/1000-(Q.tx.ts||0)<36*3600)?Q.tx:(it&&it.night?{night:it.night,tm:it.night_tm}:null);}
+function nightOpen(){var d=tpe(),m=d.getUTCHours()*60+d.getUTCMinutes();return m>=900||m<300;}
+function nightTxt(){var t=txNight(),n=t&&t.night,lb=nightOpen()?'夜盤':'昨夜夜盤';
+ if(!n||n[0]==null)return'<small data-a="open" data-k="nt:TXF" style="margin-top:2px;opacity:.75">🌙 夜盤 暫無資料 ›</small>';
+ return'<small data-a="open" data-k="nt:TXF" style="margin-top:2px">🌙 '+lb+' '+ln(n[0])+'　<span class="'+cl(n[1])+'">'+(n[1]>=0?'▲ ':'▼ ')+f2(Math.abs(n[2]),0)+'（'+f2(Math.abs(n[1]))+'%）</span>'+(t.tm?' · '+esc(t.tm):'')+' ›</small>';}
+function showNight(){var t=txNight(),n=t&&t.night,x=(t&&t.nx)||{},it=mkItem('TXF'),w=mkItem('^TWII'),h='';
+ if(!n||n[0]==null){h='<div class="empty">目前沒有夜盤資料<br>（期交所即時行情沒有取得；盤中或夜盤時段由 intraday-quotes／live-quotes 更新，失敗時不影響其他功能）</div>';}
+ else{var ref=x.ref!=null?x.ref:n[0]-n[2],sp=w&&!w.ov?n[0]-w.c:null;
+  h='<div><span class="big '+cl(n[1])+'">'+ln(n[0])+'</span><span class="bp '+cl(n[1])+'">'+chgTxt(n[1],n[2],0)+'</span></div><div class="s2">台指期近月・'+(nightOpen()?'夜盤進行中／最近成交':'昨夜夜盤（15:00～隔日 05:00）')+(t.tm?'・'+esc(t.tm):'')+'</div>'+
+  '<div class="box2"><h3>夜盤行情</h3>'+info([['夜盤最新價',ln(n[0])],['日盤收盤（漲跌基準）',ln(ref)],['漲跌',chgTxt(n[1],n[2],0)],['開盤',x.o!=null?ln(x.o):'—'],['最高',x.h!=null?ln(x.h):'—'],['最低',x.l!=null?ln(x.l):'—'],['成交量',x.v!=null?ln(x.v)+' 口':'—'],['相對加權收盤',sp==null?'—':(sp>=0?'+':'−')+Math.abs(sp).toFixed(0)+' 點']])+'</div>';}
+ h+='<div class="box2"><h3>怎麼看夜盤</h3><ul><li>夜盤是台指期在 15:00～隔天 05:00 的交易時段；漲跌是相對於<b>日盤收盤價（結算價）</b>，和 HiStock 等看盤軟體一致。</li><li>它常被拿來觀察美股與國際消息對隔天台股開盤情緒的影響，但<b>不保證隔天走勢會延續</b>。</li><li>夜盤成交量通常比日盤少，價格較容易跳動，參考時要保守。</li><li>目前只提供最新價與開高低量；夜盤的逐筆走勢圖沒有納入。</li></ul></div><div class="s2" style="margin-top:12px;line-height:1.6">資料來自期交所即時行情，可能延遲或缺漏；僅供參考，不構成投資建議。</div>';
+ $('dt').innerHTML='<div class="sb"><button data-a="back">←</button><span class="st">🌙 台指期夜盤</span></div><div class="sc">'+h+'</div>';$('dt').scrollTop=0;}
 function twiiTiles(){return ixTile('^TWII','加權指數')+(mkItem('TXF')?ixTile('TXF',(function(){var t=mkItem('TXF');return'台指期近月・'+(t&&!t.ov&&inHours()?String(t.d).slice(5).replace('-','/')+' 收盤':'日盤');})(),basisTxt()):'<div class="tile" data-a="sub" data-v="hl" style="opacity:.75"><small>台指期近月</small><b>—</b><span class="s2">資料暫時取不到<br>點此看原因 ›</span></div>');}
 function twiiHtml(){var tw=mkItem('^TWII');return'📈 台股加權 <b>'+(tw?ln(tw.c):'—')+'</b> '+(tw?'<span class="'+cl(tw.p)+'">'+chgTxt(tw.p,tw.ch,2)+'</span>':'');}
 function backChip(){return'<div class="cps"><button class="cp" data-a="sub" data-v="pick">← 返回今日</button></div>';}
@@ -263,7 +272,7 @@ function drawChart(){var el=$('ch'),cu=ST.cur;if(!el||!cu)return;var c=cu.c;if(!
 function openDetail(k){var p=k.split(':'),id=p.slice(1).join(':');ST.open=true;
  $('dt').className='sheet on';$('dt').innerHTML='<div class="sb"><button data-a="back">←</button><span class="st">載入中…</span></div><div class="sc">'+empty('載入中…')+'</div>';
  try{history.pushState({dt:1},'');}catch(e){}
- if(p[0]=='tw')load('S','H','B').then(function(){showTW(id);});else if(p[0]=='ix')load('M').then(function(){showIX(id);});else load('U').then(function(){showUS(id);});}
+ if(p[0]=='tw')load('S','H','B').then(function(){showTW(id);});else if(p[0]=='ix')load('M').then(function(){showIX(id);});else if(p[0]=='nt')load('M').then(function(){showNight();});else load('U').then(function(){showUS(id);});}
 function closeDetail(){ST.open=false;$('dt').className='sheet';ST.cur=null;if(ST.tab=='my')drawMy();}
 function starBtn(k){return'<button data-a="tog" data-k="'+esc(k)+'">'+(has(k)?'★ 已自選':'☆ 加自選')+'</button>';}
 function info(list){return'<div class="grid">'+list.map(function(x){return'<div><small>'+x[0]+'</small><b>'+x[1]+'</b></div>';}).join('')+'</div>';}
