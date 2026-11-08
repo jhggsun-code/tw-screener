@@ -83,7 +83,7 @@ function nightTxt(){var t=txNight(),n=t&&t.night,lb=nightOpen()?'夜盤':'昨夜
  if(!n||n[0]==null)return'<small data-a="open" data-k="nt:TXF" style="margin-top:2px;opacity:.75">🌙 夜盤 暫無資料 ›</small>';
  return'<small data-a="open" data-k="nt:TXF" style="margin-top:2px">🌙 '+lb+' '+ln(n[0])+'　<span class="'+cl(n[1])+'">'+(n[1]>=0?'▲ ':'▼ ')+f2(Math.abs(n[2]),0)+'（'+f2(Math.abs(n[1]))+'%）</span>'+(t.tm?' · '+esc(t.tm):'')+' ›</small>';}
 function showNight(){var t=txNight(),n=t&&t.night,x=(t&&t.nx)||{},it=mkItem('TXF'),w=mkItem('^TWII'),h='';
- if(!n||n[0]==null){h='<div class="empty">目前沒有夜盤資料<br>（期交所即時行情沒有取得；盤中或夜盤時段由 intraday-quotes／live-quotes 更新，失敗時不影響其他功能）</div>';}
+ if(!n||n[0]==null){h='<div class="empty">目前沒有夜盤資料<br>（期交所即時行情沒有取得；由 intraday-quotes 更新，失敗時不影響其他功能）</div>'+(DATA.Q&&DATA.Q.tx_err&&DATA.Q.tx_err.length?'<div class="hint" style="border-left-color:#f9a825"><b>診斷</b><br>'+DATA.Q.tx_err.map(esc).join('<br>')+(DATA.Q.upd?'<br><span class="s2">更新 '+esc(DATA.Q.upd)+'</span>':'')+'</div>':'<div class="s2" style="margin:8px 16px">尚無診斷資料：請確認已重新上傳 update.zip，並手動執行過一次 intraday-quotes。</div>');}
  else{var ref=x.ref!=null?x.ref:n[0]-n[2],sp=w&&!w.ov?n[0]-w.c:null;
   h='<div><span class="big '+cl(n[1])+'">'+ln(n[0])+'</span><span class="bp '+cl(n[1])+'">'+chgTxt(n[1],n[2],0)+'</span></div><div class="s2">台指期近月・'+(nightOpen()?'夜盤進行中／最近成交':'昨夜夜盤（15:00～隔日 05:00）')+(t.tm?'・'+esc(t.tm):'')+'</div>'+
   '<div class="box2"><h3>夜盤行情</h3>'+info([['夜盤最新價',ln(n[0])],['日盤收盤（漲跌基準）',ln(ref)],['漲跌',chgTxt(n[1],n[2],0)],['開盤',x.o!=null?ln(x.o):'—'],['最高',x.h!=null?ln(x.h):'—'],['最低',x.l!=null?ln(x.l):'—'],['成交量',x.v!=null?ln(x.v)+' 口':'—'],['相對加權收盤',sp==null?'—':(sp>=0?'+':'−')+Math.abs(sp).toFixed(0)+' 點']])+'</div>';}
@@ -97,7 +97,7 @@ function vHl(){var K=DATA.K;if(K===undefined){load('K').then(function(){if(ST.su
  var ic={ok:'✅',warn:'⚠️',bad:'❌'},Q=DATA.Q,L=DATA.L;
  return'<div class="intro"><b>🩺 資料狀態</b>　'+esc(K.gen||'')+' 完整分析時檢查。❌ 代表該來源失敗（也會推播到 Discord／Telegram），⚠️ 代表資料不完整但不影響使用。</div>'+
  K.items.map(function(x){return'<div class="fcard"><div class="fh"><span>'+(ic[x.s]||'•')+' '+esc(x.n)+'</span></div><div class="fm">'+esc(x.d)+'</div></div>';}).join('')+
- '<div class="fcard"><div class="fh"><span>⚡ 即時報價</span></div><div class="fm">個股報價（Yahoo／官方收盤）：'+(Q&&Q.upd?esc(Q.upd):'尚無')+'<br>即時加權指數：'+(liveOk()?esc(L.upd)+'（'+(L.src=='yahoo'?'Yahoo':'證交所')+'）':'未啟用或已過期（盤中才會更新）')+'</div></div>'+useHtml();}
+ '<div class="fcard"><div class="fh"><span>⚡ 即時報價</span></div><div class="fm">個股報價（Yahoo／官方收盤）：'+(Q&&Q.upd?esc(Q.upd):'尚無')+'<br>台指期行情（期交所）：'+(DATA.Q&&DATA.Q.tx?'正常':(DATA.Q&&DATA.Q.tx_err&&DATA.Q.tx_err.length?'⚠️ '+esc(DATA.Q.tx_err.join('；')):'尚無資料'))+'<br>即時加權指數：'+(liveOk()?esc(L.upd)+'（'+(L.src=='yahoo'?'Yahoo':'證交所')+'）':'未啟用或已過期（盤中才會更新）')+'</div></div>'+useHtml();}
 function vChip(){var C=DATA.C;if(C===undefined){load('C').then(function(){if(ST.sub=='chip'&&ST.tab=='home')render();});return empty('載入中…');}
  if(!C||!C.date)return empty('尚無法人資料<br>可能今日尚未公布，或證交所介面改版');
  var m=C.mkt,h='<div class="intro"><b>🏦 三大法人買賣超</b>　資料日 '+esc(C.date)+'。外資＝外資及陸資；個股單位為張，全市場為億元；僅含上市個股。</div>';
